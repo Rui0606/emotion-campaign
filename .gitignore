@@ -1,0 +1,10 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+
+# 原始大尺寸圖檔（網站實際使用的是 public/assets 內壓縮後的 .webp）
+assets-source/
