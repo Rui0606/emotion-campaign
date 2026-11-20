@@ -428,11 +428,14 @@ export default function App() {
   };
 
   const handleGoHome = () => {
-    if (!hasCheckin) {
+    // 尚未報到、或已完成活動：回到真正的首頁（語言選擇）。已完成的人再選語言會回到完成畫面，序號不會遺失
+    if (!hasCheckin || completed) {
+      setShowCareModal(false);
       goTo('language');
       return;
     }
-    if (!completed) clearProgress();
+    // 闖關中：清除作答，回到活動說明頁重新開始
+    clearProgress();
     goTo(startStep());
   };
 
