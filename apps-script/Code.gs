@@ -6,7 +6,7 @@
  *   POST {action:'complete'}  完成活動（12 歲以上附問卷，未滿 12 歲不用）→ 標記「已完成」
  *   GET  ?action=verify&code= 輸入序號繼續（換裝置、共用平板）
  * 工作人員頁（直接開啟本 Web App 網址）：
- *   個人密碼登入 → 查詢序號／手機末3碼 → 確認領取；代為報到（沒有手機的人）
+ *   個人密碼登入 → 用序號（忘記時用姓名）查詢 → 確認領取；代為報到（沒有手機的人）
  *
  * ⚠️ 帳號密碼一律放在「專案設定 → 指令碼屬性」，不要寫在程式碼裡：
  *    MITAKE_USERNAME   三竹帳號
@@ -22,7 +22,7 @@
 const REG_SHEET_NAME = '報到名單';
 const SURVEY_SHEET_NAME = '問卷回覆';
 const CODE_PREFIX = 'SEM';
-const DEFAULT_MAX_CODES = 300;
+const DEFAULT_MAX_CODES = 500; // 序號 SEM001～SEM500；可用指令碼屬性 MAX_CODES 另外設定
 const TIME_ZONE = 'Asia/Taipei';
 const MITAKE_DOMAIN = 'smsb2c.mitake.com.tw';
 
@@ -287,20 +287,24 @@ function staffLogin(pin) {
   return name ? { ok: true, name: name } : { ok: false };
 }
 
-/** query：序號（SEM012、12）或手機末3碼（如 400；剛好 3 位數字一律視為手機末3碼） */
-function staffSearch(pin, query) {
+/**
+ * mode 'code'（預設）：query 是序號，1、001、SEM001 都視為 SEM001
+ * mode 'name'：忘記序號時用姓名查，部分文字也可以（例：輸入「小明」找到「王小明」），最多列 30 筆
+ */
+function staffSearch(pin, query, mode) {
   if (!getStaffName_(pin)) return { ok: false, error: 'auth' };
-  const q = String(query || '').trim();
-  const byPhone = /^\d{3}$/.test(q);
-  const code = byPhone ? '' : normalizeCode_(q);
-  if (!byPhone && !code) return { ok: false, error: 'format' };
+  const byName = mode === 'name';
+  const nameQ = byName ? String(query || '').replace(/\s+/g, '').toLowerCase() : '';
+  const code = byName ? '' : normalizeCode_(query);
+  if (byName ? !nameQ : !code) return { ok: false, error: 'format' };
 
   const data = getSheet_(REG_SHEET_NAME).getDataRange().getValues();
   const results = [];
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 1; i < data.length && results.length < 30; i++) {
     const v = data[i];
-    const phone = normalizePhone_(v[COL.PHONE - 1]);
-    const match = byPhone ? (phone && phone.slice(-3) === q) : String(v[COL.CODE - 1]) === code;
+    const match = byName
+      ? String(v[COL.NAME - 1]).replace(/\s+/g, '').toLowerCase().indexOf(nameQ) !== -1
+      : String(v[COL.CODE - 1]) === code;
     if (match) results.push(toStaffView_(i + 1, v));
   }
   return { ok: true, results: results };
@@ -506,11 +510,15 @@ function getStaffPageHtml_() {
     </div>
 
     <div id="pickupTab">
+      <div class="opts" style="margin-bottom:10px">
+        <button type="button" class="opt on" data-mode="code">用序號查</button>
+        <button type="button" class="opt" data-mode="name">忘記序號？用姓名查</button>
+      </div>
       <div class="row">
-        <input id="queryInput" class="center" type="text" inputmode="numeric" autocomplete="off" placeholder="序號 或 手機末3碼">
+        <input id="queryInput" class="center" type="text" inputmode="numeric" autocomplete="off" placeholder="序號，例：1 或 001">
         <button class="primary" id="searchBtn">搜尋</button>
       </div>
-      <p class="hint">序號可只輸入數字，例：12 = SEM012；剛好 3 位數字（例：400）視為手機末3碼</p>
+      <div class="hint" id="searchHint"></div>
       <div id="out"></div>
     </div>
 
@@ -596,16 +604,44 @@ function getStaffPageHtml_() {
   });
 
   // ---------- 領取查詢 ----------
+  var searchMode = 'code';
+  var HINTS = {
+    code: '序號只要輸入數字，前面的 0 和 SEM 可打可不打：\\n1、001、SEM001 都是 SEM001；45、045 都是 SEM045；120 就是 SEM120',
+    name: '輸入姓名或其中幾個字（例：輸入「小明」也找得到「王小明」）。同名時請核對身分與年齡後再選擇'
+  };
+  function setMode(mode) {
+    searchMode = mode;
+    Array.prototype.forEach.call(document.querySelectorAll('.opt[data-mode]'), function (x) { x.classList.toggle('on', x.dataset.mode === mode); });
+    var input = $('queryInput');
+    input.value = '';
+    input.setAttribute('inputmode', mode === 'code' ? 'numeric' : 'text');
+    input.placeholder = mode === 'code' ? '序號，例：1 或 001' : '參加者姓名';
+    $('searchHint').textContent = HINTS[mode];
+    $('out').innerHTML = '';
+    input.focus();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.opt[data-mode]'), function (b) {
+    b.onclick = function () { setMode(b.dataset.mode); };
+  });
+  $('searchHint').style.whiteSpace = 'pre-line';
+  $('searchHint').textContent = HINTS.code;
+
   function search() {
     var q = $('queryInput').value.trim();
     if (!q) return;
     msg($('out'), '搜尋中…', 'info');
     $('searchBtn').disabled = true;
-    call('staffSearch', [pin, q], function (r) {
+    call('staffSearch', [pin, q, searchMode], function (r) {
       $('searchBtn').disabled = false;
-      if (!r.ok) { msg($('out'), '格式不正確：請輸入序號（如 12 或 SEM012）或手機末3碼', 'error'); return; }
+      if (!r.ok) {
+        msg($('out'), searchMode === 'code' ? '序號格式不正確：請只輸入數字（例：1、001、120），或改用姓名查' : '請輸入姓名', 'error');
+        return;
+      }
       results = r.results;
-      if (!results.length) { msg($('out'), '查無資料', 'error'); return; }
+      if (!results.length) {
+        msg($('out'), searchMode === 'code' ? '查無此序號，請再確認數字，或改用「忘記序號？用姓名查」' : '查無此姓名，請確認字是否正確（可只輸入其中幾個字）', 'error');
+        return;
+      }
       if (results.length === 1) { select(0); return; }
       renderList(-1);
     });
@@ -614,7 +650,7 @@ function getStaffPageHtml_() {
   function renderList(selected) {
     var out = $('out');
     out.innerHTML = '';
-    out.appendChild(el('div', 'msg info', '找到 ' + results.length + ' 筆，請參加者說出姓名後選擇：'));
+    out.appendChild(el('div', 'msg info', '找到 ' + results.length + ' 筆' + (results.length >= 30 ? '（只列前 30 筆，請輸入更完整的姓名）' : '') + '，請核對姓名、身分與年齡後選擇：'));
     results.forEach(function (s, i) {
       var item = el('div', 'item' + (selected === i ? ' sel' : ''));
       item.appendChild(el('strong', '', s.name + '（' + s.identity + '・' + s.age + '）'));
@@ -677,7 +713,7 @@ function getStaffPageHtml_() {
   }
 
   // ---------- 代為報到 ----------
-  Array.prototype.forEach.call(document.querySelectorAll('.opt'), function (b) {
+  Array.prototype.forEach.call(document.querySelectorAll('.opt[data-group]'), function (b) {
     b.onclick = function () {
       choice[b.dataset.group] = b.dataset.value;
       Array.prototype.forEach.call(document.querySelectorAll('.opt[data-group="' + b.dataset.group + '"]'), function (x) { x.classList.toggle('on', x === b); });
@@ -705,7 +741,7 @@ function getStaffPageHtml_() {
       box.appendChild(cb);
       $('rName').value = ''; $('rPhone').value = '';
       choice = { identity: '', age: '' };
-      Array.prototype.forEach.call(document.querySelectorAll('.opt'), function (x) { x.classList.remove('on'); });
+      Array.prototype.forEach.call(document.querySelectorAll('.opt[data-group]'), function (x) { x.classList.remove('on'); });
     }, $('regOut'));
   }
 
