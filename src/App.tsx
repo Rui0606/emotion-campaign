@@ -5,6 +5,7 @@ import { Language, QuizQuestion } from './types';
 import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
 import { playSound } from './utils/audio';
 import AirPlantArt from './components/AirPlantArt';
+import Zy from './components/Zhuyin';
 import { AgeGroup, CheckinError, completeActivity, normalizeCode, normalizePhone, registerCheckin, verifyCheckinCode } from './utils/checkin';
 
 // --- Settings ---
@@ -172,6 +173,7 @@ export default function App() {
   const [kidsAnswers, setKidsAnswers] = useState<Record<string, string>>(saved.kidsAnswers ?? {});
   const [kidsShowResults, setKidsShowResults] = useState(saved.kidsShowResults ?? false);
   const [kidsError, setKidsError] = useState(false);
+  const [zhuyinOn, setZhuyinOn] = useState(false);
 
   // Survey State（12 歲以上）
   const [survey, setSurvey] = useState<SurveyDraft>(EMPTY_SURVEY);
@@ -632,9 +634,20 @@ export default function App() {
             <span className="font-bold text-teal-800 text-sm">{pick('回首頁', 'Home', 'Trang chủ')}</span>
           </button>
 
-          <div className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 truncate">
-            <span className="text-orange-500">✳</span> {stepLabel[step]}
-          </div>
+          {step === 'kids_welcome' || step === 'kids_quiz' ? (
+            <button
+              type="button"
+              onClick={() => setZhuyinOn(v => !v)}
+              aria-pressed={zhuyinOn}
+              className={`btn-pop text-sm font-bold px-3.5 py-1.5 rounded-full shrink-0 ${zhuyinOn ? 'bg-orange-500 text-white' : 'bg-white text-teal-700'}`}
+            >
+              ㄅㄆㄇ 注音：{zhuyinOn ? '開' : '關'}
+            </button>
+          ) : (
+            <div className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 truncate">
+              <span className="text-orange-500">✳</span> {stepLabel[step]}
+            </div>
+          )}
         </div>
 
         <div className="w-full bg-teal-50 h-1">
@@ -1000,11 +1013,11 @@ export default function App() {
           {renderLogo('w-full h-full object-contain p-3')}
         </div>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-snug whitespace-pre-line text-center">
-        {KIDS_INTRO.title}
+      <h1 className={`text-2xl font-bold text-gray-900 tracking-tight leading-snug whitespace-pre-line text-center${zhuyinOn ? ' zy-on' : ''}`}>
+        <Zy text={KIDS_INTRO.title} on={zhuyinOn} />
       </h1>
-      <div className="bg-white/95 p-6 rounded-3xl border border-white shadow-sm space-y-4 text-gray-700 leading-loose text-[17px]">
-        {KIDS_INTRO.paragraphs.map((p, idx) => <p key={idx}>{p}</p>)}
+      <div className={`bg-white/95 p-6 rounded-3xl border border-white shadow-sm space-y-4 text-gray-700 leading-loose text-[17px]${zhuyinOn ? ' zy-on' : ''}`}>
+        {KIDS_INTRO.paragraphs.map((p, idx) => <p key={idx}><Zy text={p} on={zhuyinOn} /></p>)}
       </div>
       <button onClick={() => goTo('kids_quiz')} className={primaryBtn}>
         開始小測驗 <ArrowRight className="w-5 h-5" />
@@ -1019,12 +1032,12 @@ export default function App() {
       className="max-w-md mx-auto px-6 pb-20 space-y-8"
     >
       <div className="bg-white/90 p-5 rounded-3xl border border-teal-100 shadow-sm">
-        <p className="text-gray-700 text-base leading-relaxed font-medium">{KIDS_QUIZ_INTRO}</p>
+        <p className={`text-gray-700 text-base leading-relaxed font-medium${zhuyinOn ? ' zy-on' : ''}`}><Zy text={KIDS_QUIZ_INTRO} on={zhuyinOn} /></p>
       </div>
 
       {kidsError && (
         <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium">
-          ⚠️ 還有題目沒有選喔！請每一題都選一個答案。
+          ⚠️ <Zy text="還有題目沒有選喔！請每一題都選一個答案。" on={zhuyinOn} />
         </div>
       )}
 
@@ -1038,8 +1051,8 @@ export default function App() {
               id={`kids-q-${q.id}`}
               className={`bg-white rounded-3xl shadow-sm border p-5 space-y-4 ${kidsError && !selected ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
             >
-              <p className="font-bold text-gray-900 text-lg leading-relaxed">
-                <span className="text-teal-600 mr-2">{idx + 1}.</span>{q.question}
+              <p className={`font-bold text-gray-900 text-lg leading-relaxed${zhuyinOn ? ' zy-on' : ''}`}>
+                <span className="text-teal-600 mr-2">{idx + 1}.</span><Zy text={q.question} on={zhuyinOn} />
               </p>
               <div className="space-y-2.5">
                 {q.options.map(opt => {
@@ -1069,7 +1082,7 @@ export default function App() {
                       className={cls}
                     >
                       <span className="shrink-0 font-bold">{opt.id}.</span>
-                      <span className="flex-1">{opt.text}</span>
+                      <span className={`flex-1${zhuyinOn ? ' zy-on' : ''}`}><Zy text={opt.text} on={zhuyinOn} /></span>
                       {kidsShowResults && isAnswer && <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />}
                     </button>
                   );
@@ -1079,8 +1092,8 @@ export default function App() {
                 <div className={`p-4 rounded-2xl text-base leading-relaxed flex items-start gap-3 ${isCorrect ? 'bg-green-50 text-green-900' : 'bg-orange-50 text-orange-900'}`}>
                   <Lightbulb className={`w-5 h-5 shrink-0 mt-1 ${isCorrect ? 'text-green-600' : 'text-orange-600'}`} />
                   <div>
-                    <p className="font-bold mb-1">{isCorrect ? '✅ 答對了！' : `💡 正確答案是 ${q.correctAnswerId}`}</p>
-                    <p>{q.explanation}</p>
+                    <p className={`font-bold mb-1${zhuyinOn ? ' zy-on' : ''}`}>{isCorrect ? <>✅ <Zy text="答對了！" on={zhuyinOn} /></> : <>💡 <Zy text="正確答案是" on={zhuyinOn} /> {q.correctAnswerId}</>}</p>
+                    <p className={zhuyinOn ? 'zy-on' : ''}><Zy text={q.explanation} on={zhuyinOn} /></p>
                   </div>
                 </div>
               )}
