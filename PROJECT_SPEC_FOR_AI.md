@@ -74,6 +74,9 @@
 [language] 語言選擇 (zh / en / vi)
     │
     ▼
+[checkin] 活動報到（姓名、身分、手機 → Apps Script 產生兌換碼並發三竹簡訊；或輸入既有兌換碼驗證）
+    │  └─ 沒有兌換碼無法進入後續任何步驟；後端程式與部署方式見 apps-script/Code.gs、apps-script/部署說明.md
+    ▼
 [welcome] 活動歡迎與情緒行為障礙介紹頁
     │
     ▼

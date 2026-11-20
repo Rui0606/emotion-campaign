@@ -174,6 +174,13 @@ export const HELP_LINES: { number: string; name: LocalizedString; note: Localize
   },
 ];
 
+// 報到身分選項：value 會寫入報到試算表「身分」欄，請與備用 Google 表單的選項一致
+export const CHECKIN_IDENTITIES: { value: string; label: LocalizedString }[] = [
+  { value: '學生', label: { zh: '學生', en: 'Student', vi: 'Sinh viên' } },
+  { value: '教職員', label: { zh: '教職員', en: 'Faculty / Staff', vi: 'Giảng viên / Nhân viên' } },
+  { value: '校外人士', label: { zh: '校外人士', en: 'Visitor', vi: 'Khách bên ngoài' } },
+];
+
 // 學校諮商單位資訊：填入後會顯示在求助資源區塊；phone 留空則不顯示
 // phone 填總機（國內格式），ext 填分機；手機點擊撥號時會自動接上分機
 export const SCHOOL_COUNSELING: { name: LocalizedString; phone: string; ext: string; location: LocalizedString } = {

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock } from 'lucide-react';
+import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2 } from 'lucide-react';
 import { Language, QuizQuestion } from './types';
-import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING } from './data/content';
+import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES } from './data/content';
 import { playSound } from './utils/audio';
+import { BACKUP_CHECKIN_FORM_URL, CHECKIN_ENABLED, CheckinError, normalizeCode, normalizePhone, registerCheckin, verifyCheckinCode } from './utils/checkin';
 
 // --- Settings ---
 const COUNSELOR_CODE = '1031';
@@ -15,7 +16,7 @@ const STORAGE_TTL_MS = 2 * 60 * 60 * 1000; // 進度保留 2 小時，避免共�
 const asset = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
 
 // --- Types ---
-type Step = 'language' | 'welcome' | 'quiz' | 'bsrs' | 'bsrs_result' | 'counselor' | 'feedback';
+type Step = 'language' | 'checkin' | 'welcome' | 'quiz' | 'bsrs' | 'bsrs_result' | 'counselor' | 'feedback';
 type ShuffledQuestion = { original: QuizQuestion; options: QuizQuestion['options'] };
 
 interface SavedState {
@@ -28,6 +29,7 @@ interface SavedState {
   quizPassed: boolean;
   bsrsAnswers: Record<string, number>;
   counselorPassed: boolean;
+  checkinCode: string;
 }
 
 const loadSaved = (): Partial<SavedState> => {
@@ -123,6 +125,18 @@ export default function App() {
 
   const [showCareModal, setShowCareModal] = useState(false);
 
+  // Check-in State（報到後取得兌換碼，才能進入闖關）
+  const [checkinCode, setCheckinCode] = useState(saved.checkinCode ?? '');
+  const [checkinMode, setCheckinMode] = useState<'register' | 'code'>('register');
+  const [checkinName, setCheckinName] = useState('');
+  const [checkinIdentity, setCheckinIdentity] = useState('');
+  const [checkinPhone, setCheckinPhone] = useState('');
+  const [checkinCodeInput, setCheckinCodeInput] = useState('');
+  const [checkinBusy, setCheckinBusy] = useState(false);
+  const [checkinError, setCheckinError] = useState<CheckinError | 'form' | null>(null);
+  const [checkinDone, setCheckinDone] = useState<{ code: string; status: 'new' | 'existing'; sms?: boolean } | null>(null);
+  const hasCheckin = !CHECKIN_ENABLED || !!checkinCode;
+
   const pick = (zh: string, en: string, vi: string) => (lang === 'zh' ? zh : lang === 'en' ? en : vi);
 
   // --- Derived scores ---
@@ -134,7 +148,9 @@ export default function App() {
 
   // 防止用瀏覽器「上一頁／下一頁」跳過關卡
   const resolveStep = (step: Step): Step => {
+    if (step !== 'language' && step !== 'checkin' && !hasCheckin) return 'checkin';
     switch (step) {
+      case 'checkin': return CHECKIN_ENABLED ? 'checkin' : 'welcome';
       case 'bsrs': return quizPassed ? 'bsrs' : 'quiz';
       case 'bsrs_result': return bsrsComplete ? 'bsrs_result' : resolveStep('bsrs');
       case 'counselor': return bsrsComplete && needsCounselor ? 'counselor' : resolveStep('bsrs_result');
@@ -163,7 +179,7 @@ export default function App() {
       setCurrentStep(resolved);
       window.history.replaceState({ step: resolved }, '');
     }
-  }, [currentStep, quizPassed, bsrsComplete, needsCounselor, counselorPassed]);
+  }, [currentStep, quizPassed, bsrsComplete, needsCounselor, counselorPassed, hasCheckin]);
 
   useEffect(() => {
     if (currentStep === 'quiz' && shuffledQuiz.length === 0) {
@@ -187,13 +203,14 @@ export default function App() {
       quizPassed,
       bsrsAnswers,
       counselorPassed,
+      checkinCode,
     };
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // 無痕模式等情況可能無法寫入，略過即可
     }
-  }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed]);
+  }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed, checkinCode]);
 
   useEffect(() => {
     if (!showCareModal) return;
@@ -211,7 +228,55 @@ export default function App() {
 
   const handleSelectLanguage = (selectedLang: Language) => {
     setLang(selectedLang);
-    goTo('welcome');
+    goTo(hasCheckin ? 'welcome' : 'checkin');
+  };
+
+  const handleCheckinRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (checkinBusy) return;
+    const phone = normalizePhone(checkinPhone);
+    if (!checkinName.trim() || !checkinIdentity) {
+      setCheckinError('form');
+      return;
+    }
+    if (!phone) {
+      setCheckinError('invalid_phone');
+      return;
+    }
+    setCheckinBusy(true);
+    setCheckinError(null);
+    const result = await registerCheckin(checkinName.trim(), checkinIdentity, phone);
+    setCheckinBusy(false);
+    if (result.ok) {
+      playSound('success');
+      setCheckinCode(result.code!);
+      setCheckinDone({ code: result.code!, status: result.status ?? 'new', sms: result.sms });
+    } else {
+      playSound('wrong');
+      setCheckinError(result.error ?? 'server');
+    }
+  };
+
+  const handleCheckinVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (checkinBusy) return;
+    const code = normalizeCode(checkinCodeInput);
+    if (!code) {
+      setCheckinError('not_found');
+      return;
+    }
+    setCheckinBusy(true);
+    setCheckinError(null);
+    const result = await verifyCheckinCode(code);
+    setCheckinBusy(false);
+    if (result.ok) {
+      playSound('success');
+      setCheckinCode(result.code!);
+      goTo('welcome');
+    } else {
+      playSound('wrong');
+      setCheckinError(result.error ?? 'server');
+    }
   };
 
   const resetQuiz = () => {
@@ -358,6 +423,7 @@ export default function App() {
   const renderHeader = () => {
     if (currentStep === 'language') return null;
     const stepLabel: Record<Exclude<Step, 'language'>, string> = {
+      checkin: pick('活動報到', 'Check-in', 'Điểm danh'),
       welcome: pick('準備開始', 'Ready', 'Sẵn sàng'),
       quiz: pick('第一關：知識挑戰', 'Step 1: Quiz', 'Chặng 1: Kiến thức'),
       bsrs: pick('第二關：心情溫度計', 'Step 2: BSRS-5', 'Chặng 2: BSRS-5'),
@@ -366,7 +432,7 @@ export default function App() {
       feedback: pick('最後一步', 'Final Step', 'Bước cuối'),
     };
     const progress: Record<Exclude<Step, 'language'>, string> = {
-      welcome: '10%', quiz: '30%', bsrs: '60%', bsrs_result: '85%', counselor: '100%', feedback: '100%',
+      checkin: '5%', welcome: '10%', quiz: '30%', bsrs: '60%', bsrs_result: '85%', counselor: '100%', feedback: '100%',
     };
     const step = currentStep as Exclude<Step, 'language'>;
     return (
@@ -446,6 +512,194 @@ export default function App() {
     </motion.div>
   );
 
+  const checkinErrorText = (error: CheckinError | 'form'): string => {
+    switch (error) {
+      case 'form':
+      case 'invalid_name':
+      case 'invalid_identity':
+        return pick('請填寫姓名並選擇身分。', 'Please enter your name and choose your role.', 'Vui lòng nhập họ tên và chọn đối tượng.');
+      case 'invalid_phone':
+        return pick('請輸入正確的手機號碼（09 開頭共 10 碼）。', 'Please enter a valid Taiwan mobile number (10 digits starting with 09).', 'Vui lòng nhập số điện thoại di động Đài Loan hợp lệ (10 số, bắt đầu bằng 09).');
+      case 'phone_taken':
+        return pick(
+          '這支手機已經報到過了。如果是你本人，請填寫和報到時相同的姓名，或改用「我已經有兌換碼」。',
+          'This number has already checked in. If it is yours, enter the same name you used before, or choose "I already have a code".',
+          'Số điện thoại này đã điểm danh. Nếu là bạn, hãy nhập đúng họ tên đã dùng trước đó, hoặc chọn "Tôi đã có mã".'
+        );
+      case 'full':
+        return pick('兌換碼已全部發放完畢，請洽現場工作人員。', 'All codes have been issued. Please ask our staff.', 'Đã phát hết mã đổi quà. Vui lòng liên hệ nhân viên.');
+      case 'not_found':
+        return pick('查無此兌換碼，請確認簡訊上的兌換碼（例如 SEM012）。', 'Code not found. Please check the code in your SMS (e.g. SEM012).', 'Không tìm thấy mã. Vui lòng kiểm tra mã trong tin nhắn (ví dụ SEM012).');
+      default:
+        return pick('網路不穩或系統忙碌，請稍後再試一次。', 'Connection problem or system busy. Please try again.', 'Mạng không ổn định hoặc hệ thống đang bận. Vui lòng thử lại.');
+    }
+  };
+
+  const renderCheckin = () => {
+    const tabBtn = (mode: 'register' | 'code', label: string) => (
+      <button
+        type="button"
+        onClick={() => { setCheckinMode(mode); setCheckinError(null); }}
+        aria-pressed={checkinMode === mode}
+        className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${checkinMode === mode ? 'bg-white text-teal-800 shadow-sm' : 'text-gray-500 hover:text-teal-700'}`}
+      >
+        {label}
+      </button>
+    );
+    const inputCls = 'w-full bg-white border-2 border-gray-100 focus:border-teal-400 focus:outline-none rounded-2xl px-4 py-3.5 text-base';
+    const showBackup = checkinError === 'network' || checkinError === 'server' || checkinError === 'busy';
+
+    const done = checkinDone ?? (checkinCode ? { code: checkinCode, status: 'existing' as const } : null);
+    if (done) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+          className="max-w-md mx-auto px-6 pb-6 pt-2 space-y-6 text-center"
+        >
+          <div className="bg-gradient-to-br from-teal-500 to-emerald-600 rounded-[2rem] p-8 text-white shadow-xl shadow-teal-900/20 space-y-4">
+            <Ticket className="w-12 h-12 mx-auto opacity-90" />
+            <h2 className="text-2xl font-bold">
+              {done.status === 'existing'
+                ? pick('歡迎回來！', 'Welcome back!', 'Chào mừng bạn quay lại!')
+                : pick('報到完成！', 'You’re checked in!', 'Điểm danh thành công!')}
+            </h2>
+            <div className="bg-white rounded-2xl py-5 px-4">
+              <p className="text-xs font-semibold text-teal-700 tracking-wide">{pick('你的兌換碼', 'Your redemption code', 'Mã đổi quà của bạn')}</p>
+              <p className="text-4xl font-black text-teal-800 tracking-[0.15em] tabular-nums mt-1">{done.code}</p>
+            </div>
+            <p className="text-sm text-teal-50 leading-relaxed">
+              {done.status === 'new'
+                ? pick('兌換碼也會用簡訊傳到你的手機。完成所有關卡後，憑兌換碼領取空氣鳳梨。', 'The code will also be sent to your phone by SMS. Finish all stages and show this code to get your air plant.', 'Mã cũng sẽ được gửi qua tin nhắn SMS. Hoàn thành tất cả các chặng và xuất trình mã này để nhận cây không khí.')
+                : pick('這是你之前報到時取得的兌換碼。', 'This is the code from your earlier check-in.', 'Đây là mã từ lần điểm danh trước của bạn.')}
+            </p>
+          </div>
+          <button onClick={() => goTo('welcome')} className={primaryBtn}>
+            {pick('開始闖關', 'Start the activity', 'Bắt đầu')} <ArrowRight className="w-5 h-5" />
+          </button>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+        className="max-w-md mx-auto px-6 pb-6 space-y-6"
+      >
+        <div className="text-center space-y-2 pt-2">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+            <Ticket className="w-8 h-8 text-teal-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">{pick('活動報到', 'Event Check-in', 'Điểm danh sự kiện')}</h1>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {pick(
+              '報到後會取得兌換碼，完成闖關就能憑碼領取空氣鳳梨！',
+              'Check in to get your redemption code, then complete the activity to claim an air plant!',
+              'Điểm danh để nhận mã đổi quà, hoàn thành hoạt động để nhận cây không khí!'
+            )}
+          </p>
+        </div>
+
+        <div className="flex gap-1 bg-teal-50/90 p-1 rounded-2xl border border-teal-100">
+          {tabBtn('register', pick('我要報到', 'Check in', 'Điểm danh'))}
+          {tabBtn('code', pick('我已經有兌換碼', 'I already have a code', 'Tôi đã có mã'))}
+        </div>
+
+        {checkinMode === 'register' ? (
+          <form onSubmit={handleCheckinRegister} className="bg-white/95 rounded-3xl p-6 shadow-sm border border-white space-y-5" noValidate>
+            <div className="space-y-2">
+              <label htmlFor="ci-name" className="block text-sm font-semibold text-gray-800">{pick('姓名', 'Name', 'Họ tên')}</label>
+              <input
+                id="ci-name" type="text" autoComplete="name" maxLength={40}
+                value={checkinName}
+                onChange={e => { setCheckinName(e.target.value); setCheckinError(null); }}
+                className={inputCls}
+              />
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className="block text-sm font-semibold text-gray-800 mb-2">{pick('身分', 'Role', 'Đối tượng')}</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {CHECKIN_IDENTITIES.map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`cursor-pointer text-center rounded-2xl border-2 px-2 py-3 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-300 ${checkinIdentity === opt.value ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-gray-100 bg-white text-gray-700 hover:border-teal-200'}`}
+                  >
+                    <input
+                      type="radio" name="ci-identity" value={opt.value} className="sr-only"
+                      checked={checkinIdentity === opt.value}
+                      onChange={() => { setCheckinIdentity(opt.value); setCheckinError(null); }}
+                    />
+                    {opt.label[lang]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="space-y-2">
+              <label htmlFor="ci-phone" className="block text-sm font-semibold text-gray-800">{pick('手機號碼', 'Mobile number', 'Số điện thoại')}</label>
+              <input
+                id="ci-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="09xxxxxxxx"
+                value={checkinPhone}
+                onChange={e => { setCheckinPhone(e.target.value.replace(/[^\d+\-\s]/g, '').slice(0, 16)); setCheckinError(null); }}
+                className={`${inputCls} tracking-wider`}
+              />
+              <p className="text-xs text-gray-500">{pick('兌換碼會以簡訊傳送到這支手機。', 'Your code will be sent to this number by SMS.', 'Mã đổi quà sẽ được gửi qua SMS đến số này.')}</p>
+            </div>
+
+            {checkinError && (
+              <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
+                {checkinErrorText(checkinError)}
+                {showBackup && (
+                  <a href={BACKUP_CHECKIN_FORM_URL} target="_blank" rel="noopener noreferrer" className="block mt-2 font-semibold underline">
+                    {pick('改用備用報到表單 →', 'Use the backup check-in form →', 'Dùng biểu mẫu điểm danh dự phòng →')}
+                  </a>
+                )}
+              </div>
+            )}
+
+            <button type="submit" disabled={checkinBusy} className={`${primaryBtn} disabled:opacity-70`}>
+              {checkinBusy
+                ? <><Loader2 className="w-5 h-5 animate-spin" /> {pick('報到中…', 'Checking in…', 'Đang điểm danh…')}</>
+                : <>{pick('送出報到', 'Check in', 'Gửi điểm danh')} <ArrowRight className="w-5 h-5" /></>}
+            </button>
+
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              {pick(
+                '個資告知：修平科技大學學生發展中心蒐集你的姓名、身分與手機號碼，僅用於本次活動報到、發送兌換碼簡訊及領取核對，不作其他用途。',
+                'Privacy notice: HUST Student Development Center collects your name, role and mobile number only for event check-in, sending your code by SMS and verifying gift pickup, and for no other purpose.',
+                'Thông báo bảo mật: Trung tâm Phát triển Sinh viên HUST thu thập họ tên, đối tượng và số điện thoại của bạn chỉ để điểm danh, gửi mã qua SMS và xác nhận nhận quà, không dùng cho mục đích khác.'
+              )}
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handleCheckinVerify} className="bg-white/95 rounded-3xl p-6 shadow-sm border border-white space-y-5" noValidate>
+            <div className="space-y-2">
+              <label htmlFor="ci-code" className="block text-sm font-semibold text-gray-800">
+                {pick('輸入簡訊中的兌換碼', 'Enter the code from your SMS', 'Nhập mã trong tin nhắn SMS')}
+              </label>
+              <input
+                id="ci-code" type="text" autoComplete="off" autoCapitalize="characters" placeholder="SEM012"
+                value={checkinCodeInput}
+                onChange={e => { setCheckinCodeInput(e.target.value.slice(0, 10)); setCheckinError(null); }}
+                className={`${inputCls} text-center text-2xl font-bold tracking-[0.2em] uppercase`}
+              />
+            </div>
+            {checkinError && (
+              <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
+                {checkinErrorText(checkinError)}
+              </div>
+            )}
+            <button type="submit" disabled={checkinBusy || !checkinCodeInput.trim()} className={`${primaryBtn} disabled:opacity-60`}>
+              {checkinBusy
+                ? <><Loader2 className="w-5 h-5 animate-spin" /> {pick('確認中…', 'Checking…', 'Đang kiểm tra…')}</>
+                : <>{pick('確認兌換碼', 'Verify code', 'Xác nhận mã')} <ArrowRight className="w-5 h-5" /></>}
+            </button>
+          </form>
+        )}
+      </motion.div>
+    );
+  };
+
   const renderWelcome = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
@@ -470,9 +724,9 @@ export default function App() {
         <Lock className="w-4 h-4 shrink-0 mt-0.5 text-teal-600" />
         <p>
           {pick(
-            '本活動的測驗與心情溫度計都只在你的手機上計算，不會上傳或儲存任何作答資料，請放心填答。',
-            'All answers are calculated only on your device. Nothing is uploaded or stored, so feel free to answer honestly.',
-            'Mọi câu trả lời chỉ được tính trên thiết bị của bạn, không tải lên hay lưu trữ bất kỳ dữ liệu nào. Bạn cứ yên tâm trả lời.'
+            '小測驗與心情溫度計的作答只在你的手機上計算，不會上傳或儲存，請放心填答。',
+            'Your quiz and Emotion Thermometer answers are calculated only on your device. They are never uploaded or stored, so feel free to answer honestly.',
+            'Câu trả lời bài kiểm tra và Nhiệt kế cảm xúc chỉ được tính trên thiết bị của bạn, không tải lên hay lưu trữ. Bạn cứ yên tâm trả lời.'
           )}
         </p>
       </div>
@@ -953,6 +1207,15 @@ export default function App() {
           </p>
         </div>
 
+        {checkinCode && (
+          <div className="relative z-10 bg-white rounded-2xl px-5 py-4 text-center shadow-lg">
+            <p className="text-xs font-semibold text-teal-700 tracking-wide">
+              {pick('領取時請出示兌換碼', 'Show this code when claiming', 'Xuất trình mã đổi quà khi nhận')}
+            </p>
+            <p className="text-3xl font-black text-teal-800 tracking-[0.15em] tabular-nums mt-1">{checkinCode}</p>
+          </div>
+        )}
+
         <div className="relative z-10 pt-2">
           <button
             onClick={() => setShowCareModal(true)}
@@ -1027,6 +1290,7 @@ export default function App() {
 
   const steps: Record<Step, () => React.ReactNode> = {
     language: renderLanguageSelect,
+    checkin: renderCheckin,
     welcome: renderWelcome,
     quiz: renderQuiz,
     bsrs: renderBsrs,
