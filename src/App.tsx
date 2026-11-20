@@ -332,14 +332,21 @@ export default function App() {
         {SCHOOL_COUNSELING.phone && (
           <li>
             <a
-              href={`tel:${SCHOOL_COUNSELING.phone.replace(/[^\d+#]/g, '')}`}
+              href={`tel:+886${SCHOOL_COUNSELING.phone.replace(/\D/g, '').replace(/^0/, '')}${SCHOOL_COUNSELING.ext ? `,${SCHOOL_COUNSELING.ext}` : ''}`}
               className="flex items-center justify-between gap-3 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-100 px-4 py-3 transition-colors"
             >
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-gray-900">{SCHOOL_COUNSELING.name[lang]}</span>
                 {SCHOOL_COUNSELING.location[lang] && <span className="block text-xs text-gray-500">{SCHOOL_COUNSELING.location[lang]}</span>}
               </span>
-              <span className="shrink-0 text-sm font-bold text-teal-700 tabular-nums">{SCHOOL_COUNSELING.phone}</span>
+              <span className="shrink-0 text-right tabular-nums">
+                <span className="block text-sm font-bold text-teal-700">{SCHOOL_COUNSELING.phone}</span>
+                {SCHOOL_COUNSELING.ext && (
+                  <span className="block text-xs font-semibold text-teal-600">
+                    {pick('分機', 'ext.', 'máy lẻ')} {SCHOOL_COUNSELING.ext}
+                  </span>
+                )}
+              </span>
             </a>
           </li>
         )}

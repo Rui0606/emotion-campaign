@@ -175,10 +175,16 @@ export const HELP_LINES: { number: string; name: LocalizedString; note: Localize
 ];
 
 // 學校諮商單位資訊：填入後會顯示在求助資源區塊；phone 留空則不顯示
-export const SCHOOL_COUNSELING: { name: LocalizedString; phone: string; location: LocalizedString } = {
-  name: { zh: '修平科技大學 學生諮商中心', en: 'HUST Student Counseling Center', vi: 'Trung tâm Tư vấn Sinh viên HUST' },
-  phone: '',
-  location: { zh: '', en: '', vi: '' },
+// phone 填總機（國內格式），ext 填分機；手機點擊撥號時會自動接上分機
+export const SCHOOL_COUNSELING: { name: LocalizedString; phone: string; ext: string; location: LocalizedString } = {
+  name: { zh: '修平科技大學 學生發展中心', en: 'HUST Student Development Center', vi: 'Trung tâm Phát triển Sinh viên HUST' },
+  phone: '04-2496-1100',
+  ext: '6260',
+  location: {
+    zh: '東魯樓 E111',
+    en: 'Donglu Building E0110, E0111',
+    vi: 'Tòa Donglu, phòng E0110, E0111',
+  },
 };
 
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
