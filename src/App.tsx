@@ -4,6 +4,7 @@ import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Bra
 import { Language, QuizQuestion } from './types';
 import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
 import { playSound } from './utils/audio';
+import AirPlantArt from './components/AirPlantArt';
 import { AgeGroup, CheckinError, completeActivity, normalizeCode, normalizePhone, registerCheckin, verifyCheckinCode } from './utils/checkin';
 
 // --- Settings ---
@@ -122,7 +123,7 @@ const scrollToElement = (id: string, offset: number) => {
   window.scrollTo({ top: y, behavior: 'smooth' });
 };
 
-const primaryBtn = 'w-full bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-md shadow-teal-900/10';
+const primaryBtn = 'btn-pop w-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg py-4 px-6 rounded-2xl flex items-center justify-center gap-2';
 
 export default function App() {
   const [saved] = useState(loadSaved);
@@ -632,7 +633,7 @@ export default function App() {
           </button>
 
           <div className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 truncate">
-            {stepLabel[step]}
+            <span className="text-orange-500">✳</span> {stepLabel[step]}
           </div>
         </div>
 
@@ -658,8 +659,10 @@ export default function App() {
           {renderLogo('w-full h-full object-contain p-3')}
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-teal-700 tracking-wide">115年修平特殊教育宣導</p>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">給情緒喘口氣</h1>
+          <p className="kicker text-sm">✳ Special Education Week 2026</p>
+          <div><span className="ribbon text-sm">✳ 115年修平特殊教育宣導</span></div>
+          <h1 className="bubble-title pt-2">給情緒喘口氣</h1>
+          <AirPlantArt className="w-64 mx-auto -mt-1" />
         </div>
       </div>
 
@@ -1776,10 +1779,8 @@ export default function App() {
       {/* 背景圖層：用 fixed 圖層取代 background-attachment: fixed（iPhone 不支援且會造成捲動卡頓） */}
       <div
         aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-[#f3faf8] bg-cover bg-center"
-        style={{ backgroundImage: `url("${asset('background.webp')}")` }}
+        className="fixed inset-0 -z-10 paper-grid"
       />
-      <div aria-hidden="true" className="fixed inset-0 -z-10 bg-white/45" />
 
       {renderHeader()}
       <main>

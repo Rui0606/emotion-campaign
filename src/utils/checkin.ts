@@ -30,6 +30,10 @@ export interface SurveyAnswers {
 
 const TIMEOUT_MS = 20000;
 
+// 預覽模式（建置時設 VITE_PREVIEW=1）：不連後端、不發簡訊，回傳假資料
+const PREVIEW = import.meta.env.VITE_PREVIEW === '1';
+let previewAge: AgeGroup = 'adult';
+
 /** 與 Apps Script 的 normalizePhone_ 規則相同：統一成 09 開頭 10 碼，不合格回傳空字串 */
 export const normalizePhone = (raw: string): string => {
   let d = raw.replace(/\D/g, '');
@@ -67,6 +71,7 @@ const post = (body: object) =>
 const toAge = (v: unknown): AgeGroup => (v === 'child' ? 'child' : 'adult');
 
 export const registerCheckin = async (name: string, identity: string, age: AgeGroup, phone: string): Promise<CheckinResult> => {
+  if (PREVIEW) { previewAge = age; return { ok: true, code: 'SEM000', status: 'new', age, completed: false, sms: false }; }
   try {
     const data = await post({ action: 'register', name, identity, age, phone });
     if (data && data.ok && data.code) {
@@ -79,6 +84,7 @@ export const registerCheckin = async (name: string, identity: string, age: AgeGr
 };
 
 export const verifyCheckinCode = async (code: string): Promise<CheckinResult> => {
+  if (PREVIEW) return { ok: true, code, status: 'existing', age: previewAge, completed: false };
   try {
     const data = await request(`${CHECKIN_API_URL}?action=verify&code=${encodeURIComponent(code)}`);
     if (data && data.ok) return { ok: true, code: String(data.code), status: 'existing', age: toAge(data.age), completed: !!data.completed };
@@ -90,6 +96,7 @@ export const verifyCheckinCode = async (code: string): Promise<CheckinResult> =>
 
 /** 完成活動：12 歲以上要附問卷；未滿 12 歲不用 */
 export const completeActivity = async (code: string, survey?: SurveyAnswers): Promise<CheckinResult> => {
+  if (PREVIEW) return { ok: true, completed: true };
   try {
     const data = await post({ action: 'complete', code, survey });
     if (data && data.ok) return { ok: true, completed: true };
