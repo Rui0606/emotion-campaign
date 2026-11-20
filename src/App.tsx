@@ -11,7 +11,7 @@ const COUNSELOR_CODE = '1031';
 const STORAGE_KEY = 'hsiuping-emotion-campaign-v2'; // 流程改版時換 key，避免讀到舊版進度
 const STORAGE_TTL_MS = 2 * 60 * 60 * 1000; // 進度保留 2 小時，避免共用裝置留下前一位的結果
 const KIOSK_KEY = 'hsiuping-emotion-kiosk';
-const KIOSK_IDLE_MS = 10 * 60 * 1000; // 共用平板閒置 10 分鐘自動回到首頁
+const KIOSK_IDLE_MS = 2 * 60 * 1000; // 共用平板閒置 2 分鐘自動回到首頁
 
 // 圖片路徑一律相對於網站根目錄（支援 GitHub Pages 子路徑）
 const asset = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
@@ -267,7 +267,7 @@ export default function App() {
     }
   }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed, checkinCode, checkinName, ageGroup, completed, kidsAnswers, kidsShowResults]);
 
-  // 共用平板：閒置 10 分鐘自動清除並回到首頁，避免下一位看到前一位的結果
+  // 共用平板：閒置 2 分鐘自動清除並回到首頁，避免下一位看到前一位的結果
   const lastActivity = useRef(Date.now());
   const stepRef = useRef(currentStep);
   stepRef.current = currentStep;
@@ -281,7 +281,7 @@ export default function App() {
         lastActivity.current = Date.now();
         resetAll();
       }
-    }, 30000);
+    }, 10000); // 每 10 秒檢查一次，實際清除時間約 2 分鐘～2 分 10 秒
     return () => {
       events.forEach(ev => window.removeEventListener(ev, mark));
       window.clearInterval(timer);
