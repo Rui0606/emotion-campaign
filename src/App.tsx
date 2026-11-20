@@ -610,7 +610,7 @@ export default function App() {
       counselor: pick('心理師關懷', 'Counselor', 'Tư vấn'),
       survey: pick('最後一步：活動問卷', 'Final Step: Survey', 'Bước cuối: Khảo sát'),
       kids_welcome: '準備開始',
-      kids_quiz: '認識情緒行為障礙',
+      kids_quiz: '認識情緒',
       done: pick('完成！', 'Done!', 'Hoàn thành!'),
     };
     const progress: Record<Exclude<Step, 'language'>, string> = {
