@@ -74,9 +74,13 @@
 [language] 語言選擇 (zh / en / vi)
     │
     ▼
-[checkin] 活動報到（姓名、身分、手機 → Apps Script 產生兌換碼並發三竹簡訊；或輸入既有兌換碼驗證）
-    │  └─ 沒有兌換碼無法進入後續任何步驟；後端程式與部署方式見 apps-script/Code.gs、apps-script/部署說明.md
-    ▼
+[checkin] 活動報到（姓名、身分、年齡組別、手機 → Apps Script 產生序號 SEMxxx 並發三竹簡訊；
+    │         或「我已經有序號」輸入工作人員代為報到的序號，年齡以後端紀錄為準）
+    │  └─ 沒有序號無法進入後續任何步驟；後端程式與部署方式見 apps-script/Code.gs、apps-script/部署說明.md
+    │
+    ├── 未滿12歲 → [kids_welcome] 兒童版介紹（只有中文）→ [kids_quiz] 兒童版 5 題
+    │                 └─ 看解答：正確答案綠色粗體＋兒童版解說；可答錯 → 「完成」→ [done]
+    ▼ 12歲以上
 [welcome] 活動歡迎與情緒行為障礙介紹頁
     │
     ▼
@@ -95,13 +99,16 @@
     │               │
     └── 若 前五題總分 <= 5 且 第6題分數 < 2：
                     ▼
-[feedback] 最後一步：領取空氣鳳梨說明卡片（含 PINE.png 懸浮動畫）
-    │  └─ 點擊「前往填寫問卷」→ 開啟 [Care Modal] 彈窗顯示 care.png 照顧指南
-    │       └─ 點擊「我知道了，前往問卷」→ 新分頁開啟 Google 表單
-    │          https://forms.gle/myEPAbGQHhxUiGQZ7
+[survey] 最後一步：網頁內匿名問卷（性別、Q1 單選、Q2/Q3 1-5 分、Q4 選填）
+    │  └─ 送出 → Apps Script 標記「已完成」並把問卷寫入「問卷回覆」分頁（不含姓名/手機/序號）
     ▼
-完成問卷後，將表單送出畫面出示給工作人員兌換空氣鳳梨
+[done] ✓ 已完成：序號、姓名、空氣鳳梨照顧方法彈窗；共用平板模式顯示「完成，換下一位」
+    └─ 到領取處說序號＋姓名，工作人員在工作人員頁確認領取（須已完成、只能領一次）
 ```
+
+- **共用平板模式**：網址加 `?kiosk=1`（記在 localStorage，`?kiosk=0` 取消）。報到頁預設「我已經有序號」、閒置 10 分鐘自動清除、完成頁有「完成，換下一位」。
+- 輸入不同序號時會清除這台裝置上前一個序號的進度。
+- 以下 5.x 章節的 `feedback` 已改為 `survey` + `done`，Google 滿意度表單（`FEEDBACK_FORM_URL`）已移除。
 
 ---
 
@@ -191,7 +198,10 @@
 | 需求 | 檔案與位置 |
 |---|---|
 | 修改心理師通關密碼 | `src/App.tsx` 頂部常數 `COUNSELOR_CODE`（目前為 `'1031'`） |
-| 修改 Google 問卷連結 | `src/App.tsx` 頂部常數 `FEEDBACK_FORM_URL` |
+| 修改問卷題目 | `src/data/content.ts` 的 `SURVEY`；選項值須與 `apps-script/Code.gs` 的 `SURVEY_OPTIONS` 一致 |
+| 修改兒童版介紹與題目 | `src/data/content.ts` 的 `KIDS_INTRO`、`KIDS_QUIZ_QUESTIONS` |
+| 修改報到身分選項 | `src/data/content.ts` 的 `CHECKIN_IDENTITIES`；須與 `Code.gs` 的 `IDENTITIES` 一致 |
+| 修改報到 API 網址 | `src/utils/checkin.ts` 的 `CHECKIN_API_URL` |
 | 修改測驗題目 / BSRS 文字 / 三語文案 | `src/data/content.ts` |
 | 修改求助專線 / 學校諮商中心電話 | `src/data/content.ts` 的 `HELP_LINES`、`SCHOOL_COUNSELING` |
 | 更換圖片素材 | 轉成 WebP 後覆蓋 `public/assets/` 內的 `logo.webp`, `background.webp`, `pine.webp`, `care.webp` |

@@ -174,11 +174,146 @@ export const HELP_LINES: { number: string; name: LocalizedString; note: Localize
   },
 ];
 
-// 報到身分選項：value 會寫入報到試算表「身分」欄，請與備用 Google 表單的選項一致
+// 報到身分選項：value 會寫入報到試算表「身分」欄，必須與 apps-script/Code.gs 的 IDENTITIES 一致
 export const CHECKIN_IDENTITIES: { value: string; label: LocalizedString }[] = [
-  { value: '學生', label: { zh: '學生', en: 'Student', vi: 'Sinh viên' } },
-  { value: '教職員', label: { zh: '教職員', en: 'Faculty / Staff', vi: 'Giảng viên / Nhân viên' } },
-  { value: '校外人士', label: { zh: '校外人士', en: 'Visitor', vi: 'Khách bên ngoài' } },
+  { value: '校內職員/老師', label: { zh: '校內職員／老師', en: 'School staff / Teacher', vi: 'Nhân viên / Giáo viên trong trường' } },
+  { value: '學生', label: { zh: '學生', en: 'Student', vi: 'Học sinh / Sinh viên' } },
+  { value: '來賓', label: { zh: '來賓', en: 'Guest', vi: 'Khách quý' } },
+];
+
+// 年齡組別：12 歲以上走大人版（含心情溫度計與問卷）；未滿 12 歲走兒童版（只有認識情緒行為障礙 5 題）
+export const CHECKIN_AGES: { value: 'adult' | 'child'; label: LocalizedString }[] = [
+  { value: 'adult', label: { zh: '12歲以上', en: '12 or older', vi: 'Từ 12 tuổi trở lên' } },
+  { value: 'child', label: { zh: '未滿12歲', en: 'Under 12', vi: 'Dưới 12 tuổi' } },
+];
+
+// 活動問卷（12 歲以上；匿名，value 必須與 Code.gs 的 SURVEY_OPTIONS 一致）
+export const SURVEY = {
+  title: { zh: '活動問卷', en: 'Event Survey', vi: 'Khảo sát hoạt động' } as LocalizedString,
+  intro: {
+    zh: '最後一步！這份問卷是匿名的，不會記錄你的姓名與手機。',
+    en: 'Last step! This survey is anonymous—your name and phone number are not recorded.',
+    vi: 'Bước cuối cùng! Khảo sát này là ẩn danh, không ghi lại tên và số điện thoại của bạn.',
+  } as LocalizedString,
+  gender: {
+    question: { zh: '性別', en: 'Gender', vi: 'Giới tính' } as LocalizedString,
+    options: [
+      { value: '生理男性', label: { zh: '生理男性', en: 'Male', vi: 'Nam' } },
+      { value: '生理女性', label: { zh: '生理女性', en: 'Female', vi: 'Nữ' } },
+    ] as { value: string; label: LocalizedString }[],
+  },
+  q1: {
+    question: {
+      zh: '1. 校園中協助特殊教育學生的單位是？',
+      en: '1. Which unit assists special education students on campus?',
+      vi: '1. Đơn vị nào trong trường hỗ trợ học sinh giáo dục đặc biệt?',
+    } as LocalizedString,
+    options: [
+      { value: '警衛室', label: { zh: '警衛室', en: 'Security Office', vi: 'Phòng bảo vệ' } },
+      { value: '學發中心資源教室', label: { zh: '學發中心資源教室', en: 'S.D.C & Resource Room', vi: 'Phòng tài nguyên' } },
+    ] as { value: string; label: LocalizedString }[],
+  },
+  q2: {
+    zh: '2. 今天特教宣導讓我更加認識情緒行為障礙相關知識。',
+    en: "2. Today's special education awareness activity helped me learn more about emotional and behavioral disorders.",
+    vi: '2. Buổi tuyên truyền về giáo dục đặc biệt hôm nay giúp tôi hiểu thêm về các kiến thức liên quan đến rối loạn cảm xúc và hành vi.',
+  } as LocalizedString,
+  q3: {
+    zh: '3. 如果未來有遇到身心障礙同學，我會尊重每位同學差異，嘗試理解他們的障礙。',
+    en: '3. If I meet classmates with disabilities in the future, I will respect their differences and try to understand their challenges.',
+    vi: '3. Nếu sau này tôi gặp bạn học có khuyết tật, tôi sẽ tôn trọng sự khác biệt của họ và cố gắng hiểu những khó khăn của họ.',
+  } as LocalizedString,
+  scaleLow: { zh: '非常不同意', en: 'Strongly disagree', vi: 'Rất không đồng ý' } as LocalizedString,
+  scaleHigh: { zh: '非常同意', en: 'Strongly agree', vi: 'Rất đồng ý' } as LocalizedString,
+  q4: {
+    zh: '4. 今天活動建議或是給身心障礙同學的鼓勵（選填）',
+    en: "4. Suggestions for today's event or words of encouragement for students with disabilities (optional)",
+    vi: '4. Góp ý cho hoạt động hôm nay hoặc lời động viên gửi đến các bạn học sinh khuyết tật (không bắt buộc)',
+  } as LocalizedString,
+};
+
+// ============ 兒童版（未滿 12 歲，只有中文）============
+
+export const KIDS_INTRO = {
+  title: '115年修平特殊教育宣導－\n「給情緒喘口氣」',
+  paragraphs: [
+    '這次活動要帶大家認識「情緒行為障礙」。在學校裡，有些同學心裡常常像坐雲霄飛車一樣，很容易緊張、突然大發脾氣、還沒輪到他就一直搶著玩遊戲器材、上課一直插嘴、在教室走來走去，或是不知道怎麼跟大家相處。',
+    '如果這種狀況持續很久，會讓他沒辦法坐在教室裡好好上課、沒辦法和大家下課一起開心玩、或是大家會不敢和他當朋友。',
+    '他們其實非常需要大家的幫忙。他們並不是「愛生氣」、「不聽話」或「故意搗蛋」，也不是跟他們說「不要這樣」、「想開一點」、「不要生氣」就會好，他們真正需要的是被你們認識，多點時間陪伴，還有適合的協助！',
+  ],
+};
+
+export const KIDS_QUIZ_INTRO = '一、認識情緒行為障礙：接下來有 5 個小問題，來玩個小測驗吧！答錯也沒關係，這不是考試，主要是想讓大家更了解彼此喔！';
+
+export interface KidsQuizQuestion {
+  id: string;
+  question: string;
+  options: { id: string; text: string }[];
+  correctAnswerId: string;
+  explanation: string;
+}
+
+export const KIDS_QUIZ_QUESTIONS: KidsQuizQuestion[] = [
+  {
+    id: 'q1',
+    question: '下面哪一種情況，比較像是「情緒行為障礙」？',
+    options: [
+      { id: 'A', text: '偶爾心情不好，生氣一下下' },
+      { id: 'B', text: '故意調皮搗蛋、愛唱反調' },
+      { id: 'C', text: '常常控制不住情緒或行為，持續很久，而且影響到上課或交朋友' },
+      { id: 'D', text: '只是比較害羞，不太愛講話' },
+    ],
+    correctAnswerId: 'C',
+    explanation: '每個人偶爾都會心情不好、生氣一下，這很正常喔！「情緒行為障礙」是常常控制不住情緒或行為，而且持續很久，讓上課、交朋友都變得很辛苦。',
+  },
+  {
+    id: 'q2',
+    question: '下面哪一種是常見的「情緒行為障礙」？',
+    options: [
+      { id: 'A', text: '很容易分心、沒有辦法安靜坐在位子上（注意力缺陷過動症 ADHD）' },
+      { id: 'B', text: '大腦像感冒一樣生病了，讓想法變得很混亂，有時候會看到或聽到別人沒發現的東西（精神性疾患）' },
+      { id: 'C', text: '常常無緣無故就緊張到心跳很快、一直胡思亂想停不下來、一直覺得很害怕（焦慮性疾患）' },
+      { id: 'D', text: '以上全部都是' },
+    ],
+    correctAnswerId: 'D',
+    explanation: '這些都是常見的情緒行為障礙！有的人很難專心坐好，有的人大腦像感冒一樣生病了，有的人常常很緊張、很害怕。他們都不是故意的，只是需要多一點幫忙。',
+  },
+  {
+    id: 'q3',
+    question: '如果身邊的同學情緒快爆炸、很不開心，怎麼做比較好？',
+    options: [
+      { id: 'A', text: '跟他說「不要想太多啦」' },
+      { id: 'B', text: '叫他自己去旁邊冷靜，不要吵到別人' },
+      { id: 'C', text: '先讓他喘口氣，有需要時陪陪他，或幫忙找老師來協助' },
+      { id: 'D', text: '假裝沒看到，趕快閃遠一點' },
+    ],
+    correctAnswerId: 'C',
+    explanation: '同學情緒快爆炸的時候，先讓他喘口氣，不要催他、也不要罵他。如果他需要，就陪在他旁邊，或是趕快去找老師來幫忙，這樣最好！',
+  },
+  {
+    id: 'q4',
+    question: '關於「情緒行為障礙」，下面哪一句話才是對的？',
+    options: [
+      { id: 'A', text: '光看長相就能一眼認出來' },
+      { id: 'B', text: '有這種困擾的人，一定天天都在發脾氣、找麻煩' },
+      { id: 'C', text: '每個人的狀況都一模一樣' },
+      { id: 'D', text: '有些困擾從外表看不出來，每個人需要的幫忙也不一樣' },
+    ],
+    correctAnswerId: 'D',
+    explanation: '很多困擾從外表是看不出來的，看不到不代表不存在。每個人的狀況都不一樣，需要的幫忙也不一樣喔！',
+  },
+  {
+    id: 'q5',
+    question: '如果發現同學有情緒或行為上的困擾，你覺得最重要的是什麼？',
+    options: [
+      { id: 'A', text: '逼他一定要跟大家一模一樣' },
+      { id: 'B', text: '覺得他是「難相處的怪人」或「壞學生」，盡量離他遠一點' },
+      { id: 'C', text: '了解每個人本來就不一樣，給他適合的幫忙' },
+      { id: 'D', text: '只要跟他說「想開一點」就好' },
+    ],
+    correctAnswerId: 'C',
+    explanation: '每個人本來就不一樣！不要叫同學「怪人」或「壞學生」，試著多了解他、陪陪他，給他適合的幫忙，大家都可以成為好朋友。',
+  },
 ];
 
 // 學校諮商單位資訊：填入後會顯示在求助資源區塊；phone 留空則不顯示

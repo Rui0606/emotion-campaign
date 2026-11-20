@@ -1,25 +1,31 @@
 // 報到系統（Google Apps Script Web App）串接
-// 網址可在建置時用環境變數 VITE_CHECKIN_API_URL 覆寫（測試用）；留空字串則整個報到關卡會關閉
+// 網址可在建置時用環境變數 VITE_CHECKIN_API_URL 覆寫（測試用）
 export const CHECKIN_API_URL: string =
-  import.meta.env.VITE_CHECKIN_API_URL ??
+  import.meta.env.VITE_CHECKIN_API_URL ||
   'https://script.google.com/a/macros/hust.edu.tw/s/AKfycbwKDO_NUSuS1AsXyEeeNqmMySlLs1wH1LDwOwoIqKdcHX0G6pYoSp7TyWiQoHyMIaEEGQ/exec';
 
-// 網頁報到失敗時的備用 Google 表單
-export const BACKUP_CHECKIN_FORM_URL =
-  'https://docs.google.com/forms/d/e/1FAIpQLSdjchFJX6OyqKN3NFDI6tJlzNalZiAeKYWCy6SUArcwQdVnNQ/viewform';
-
-export const CHECKIN_ENABLED = CHECKIN_API_URL.length > 0;
+export type AgeGroup = 'adult' | 'child';
 
 export type CheckinError =
-  | 'invalid_name' | 'invalid_identity' | 'invalid_phone'
-  | 'phone_taken' | 'full' | 'busy' | 'server' | 'network' | 'not_found';
+  | 'invalid_name' | 'invalid_identity' | 'invalid_age' | 'invalid_phone'
+  | 'phone_taken' | 'full' | 'busy' | 'server' | 'network' | 'not_found' | 'invalid_survey';
 
 export interface CheckinResult {
   ok: boolean;
   code?: string;
   status?: 'new' | 'existing';
+  age?: AgeGroup;
+  completed?: boolean;
   sms?: boolean;
   error?: CheckinError;
+}
+
+export interface SurveyAnswers {
+  gender: string;
+  q1: string;
+  q2: number;
+  q3: number;
+  q4: string;
 }
 
 const TIMEOUT_MS = 20000;
@@ -50,15 +56,22 @@ const request = async (input: string, init?: RequestInit): Promise<any> => {
   }
 };
 
-export const registerCheckin = async (name: string, identity: string, phone: string): Promise<CheckinResult> => {
+// 用 text/plain 送出，避免瀏覽器先送 CORS 預檢請求（Apps Script 不支援）
+const post = (body: object) =>
+  request(CHECKIN_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body),
+  });
+
+const toAge = (v: unknown): AgeGroup => (v === 'child' ? 'child' : 'adult');
+
+export const registerCheckin = async (name: string, identity: string, age: AgeGroup, phone: string): Promise<CheckinResult> => {
   try {
-    // 用 text/plain 送出，避免瀏覽器先送 CORS 預檢請求（Apps Script 不支援）
-    const data = await request(CHECKIN_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'register', name, identity, phone }),
-    });
-    if (data && data.ok && data.code) return { ok: true, code: String(data.code), status: data.status, sms: data.sms };
+    const data = await post({ action: 'register', name, identity, age, phone });
+    if (data && data.ok && data.code) {
+      return { ok: true, code: String(data.code), status: data.status, age: toAge(data.age), completed: !!data.completed, sms: data.sms };
+    }
     return { ok: false, error: (data && data.error) || 'server' };
   } catch {
     return { ok: false, error: 'network' };
@@ -68,8 +81,19 @@ export const registerCheckin = async (name: string, identity: string, phone: str
 export const verifyCheckinCode = async (code: string): Promise<CheckinResult> => {
   try {
     const data = await request(`${CHECKIN_API_URL}?action=verify&code=${encodeURIComponent(code)}`);
-    if (data && data.ok) return { ok: true, code: String(data.code), status: 'existing' };
+    if (data && data.ok) return { ok: true, code: String(data.code), status: 'existing', age: toAge(data.age), completed: !!data.completed };
     return { ok: false, error: 'not_found' };
+  } catch {
+    return { ok: false, error: 'network' };
+  }
+};
+
+/** 完成活動：12 歲以上要附問卷；未滿 12 歲不用 */
+export const completeActivity = async (code: string, survey?: SurveyAnswers): Promise<CheckinResult> => {
+  try {
+    const data = await post({ action: 'complete', code, survey });
+    if (data && data.ok) return { ok: true, completed: true };
+    return { ok: false, error: (data && data.error) || 'server' };
   } catch {
     return { ok: false, error: 'network' };
   }

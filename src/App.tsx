@@ -1,23 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2 } from 'lucide-react';
+import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2, ClipboardList, Sprout, UserRoundPlus } from 'lucide-react';
 import { Language, QuizQuestion } from './types';
-import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES } from './data/content';
+import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
 import { playSound } from './utils/audio';
-import { BACKUP_CHECKIN_FORM_URL, CHECKIN_ENABLED, CheckinError, normalizeCode, normalizePhone, registerCheckin, verifyCheckinCode } from './utils/checkin';
+import { AgeGroup, CheckinError, completeActivity, normalizeCode, normalizePhone, registerCheckin, verifyCheckinCode } from './utils/checkin';
 
 // --- Settings ---
 const COUNSELOR_CODE = '1031';
-const FEEDBACK_FORM_URL = 'https://forms.gle/myEPAbGQHhxUiGQZ7';
-const STORAGE_KEY = 'hsiuping-emotion-campaign';
+const STORAGE_KEY = 'hsiuping-emotion-campaign-v2'; // 流程改版時換 key，避免讀到舊版進度
 const STORAGE_TTL_MS = 2 * 60 * 60 * 1000; // 進度保留 2 小時，避免共用裝置留下前一位的結果
+const KIOSK_KEY = 'hsiuping-emotion-kiosk';
+const KIOSK_IDLE_MS = 10 * 60 * 1000; // 共用平板閒置 10 分鐘自動回到首頁
 
 // 圖片路徑一律相對於網站根目錄（支援 GitHub Pages 子路徑）
 const asset = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
 
+// 共用平板模式：網址加 ?kiosk=1 開啟（會記在這台裝置），?kiosk=0 關閉
+const detectKiosk = (): boolean => {
+  try {
+    const param = new URLSearchParams(window.location.search).get('kiosk');
+    if (param === '1') localStorage.setItem(KIOSK_KEY, '1');
+    if (param === '0') localStorage.removeItem(KIOSK_KEY);
+    return localStorage.getItem(KIOSK_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
 // --- Types ---
-type Step = 'language' | 'checkin' | 'welcome' | 'quiz' | 'bsrs' | 'bsrs_result' | 'counselor' | 'feedback';
+type Step =
+  | 'language' | 'checkin'
+  | 'welcome' | 'quiz' | 'bsrs' | 'bsrs_result' | 'counselor' | 'survey'   // 12 歲以上
+  | 'kids_welcome' | 'kids_quiz'                                             // 未滿 12 歲
+  | 'done';
 type ShuffledQuestion = { original: QuizQuestion; options: QuizQuestion['options'] };
+type SurveyDraft = { gender: string; q1: string; q2: number; q3: number; q4: string };
+const EMPTY_SURVEY: SurveyDraft = { gender: '', q1: '', q2: 0, q3: 0, q4: '' };
 
 interface SavedState {
   ts: number;
@@ -30,6 +49,11 @@ interface SavedState {
   bsrsAnswers: Record<string, number>;
   counselorPassed: boolean;
   checkinCode: string;
+  checkinName: string;
+  ageGroup: AgeGroup;
+  completed: boolean;
+  kidsAnswers: Record<string, string>;
+  kidsShowResults: boolean;
 }
 
 const loadSaved = (): Partial<SavedState> => {
@@ -124,18 +148,37 @@ export default function App() {
   const [counselorPassed, setCounselorPassed] = useState(saved.counselorPassed ?? false);
 
   const [showCareModal, setShowCareModal] = useState(false);
+  const [kiosk] = useState(detectKiosk);
 
-  // Check-in State（報到後取得兌換碼，才能進入闖關）
+  // Check-in State（報到後取得序號，才能進入闖關）
   const [checkinCode, setCheckinCode] = useState(saved.checkinCode ?? '');
-  const [checkinMode, setCheckinMode] = useState<'register' | 'code'>('register');
-  const [checkinName, setCheckinName] = useState('');
+  const [checkinName, setCheckinName] = useState(saved.checkinName ?? '');
+  const [ageGroup, setAgeGroup] = useState<AgeGroup>(saved.ageGroup ?? 'adult');
+  const [completed, setCompleted] = useState(saved.completed ?? false);
+  const [checkinMode, setCheckinMode] = useState<'register' | 'code'>(kiosk ? 'code' : 'register');
+  const [checkinNameInput, setCheckinNameInput] = useState('');
   const [checkinIdentity, setCheckinIdentity] = useState('');
+  const [checkinAge,setCheckinAge] = useState<AgeGroup | ''>('');
   const [checkinPhone, setCheckinPhone] = useState('');
   const [checkinCodeInput, setCheckinCodeInput] = useState('');
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [checkinError, setCheckinError] = useState<CheckinError | 'form' | null>(null);
   const [checkinDone, setCheckinDone] = useState<{ code: string; status: 'new' | 'existing'; sms?: boolean } | null>(null);
-  const hasCheckin = !CHECKIN_ENABLED || !!checkinCode;
+  const hasCheckin = !!checkinCode;
+  const isChild = ageGroup === 'child';
+
+  // Kids quiz State（未滿 12 歲）
+  const [kidsAnswers, setKidsAnswers] = useState<Record<string, string>>(saved.kidsAnswers ?? {});
+  const [kidsShowResults, setKidsShowResults] = useState(saved.kidsShowResults ?? false);
+  const [kidsError, setKidsError] = useState(false);
+
+  // Survey State（12 歲以上）
+  const [survey, setSurvey] = useState<SurveyDraft>(EMPTY_SURVEY);
+  const [surveyError, setSurveyError] = useState(false);
+
+  // 送出完成（問卷／兒童版）時的狀態
+  const [completeBusy, setCompleteBusy] = useState(false);
+  const [completeError, setCompleteError] = useState<CheckinError | null>(null);
 
   const pick = (zh: string, en: string, vi: string) => (lang === 'zh' ? zh : lang === 'en' ? en : vi);
 
@@ -147,17 +190,24 @@ export default function App() {
   const needsCounselor = totalBaseScore >= 6 || suicideScore >= 2;
 
   // 防止用瀏覽器「上一頁／下一頁」跳過關卡
+  const KIDS_STEPS: Step[] = ['kids_welcome', 'kids_quiz'];
+  const ADULT_STEPS: Step[] = ['welcome', 'quiz', 'bsrs', 'bsrs_result', 'counselor', 'survey'];
   const resolveStep = (step: Step): Step => {
-    if (step !== 'language' && step !== 'checkin' && !hasCheckin) return 'checkin';
+    if (step === 'language' || step === 'checkin') return step;
+    if (!hasCheckin) return 'checkin';
+    if (completed) return 'done';
+    if (isChild && ADULT_STEPS.includes(step)) return 'kids_welcome';
+    if (!isChild && KIDS_STEPS.includes(step)) return 'welcome';
     switch (step) {
-      case 'checkin': return CHECKIN_ENABLED ? 'checkin' : 'welcome';
       case 'bsrs': return quizPassed ? 'bsrs' : 'quiz';
       case 'bsrs_result': return bsrsComplete ? 'bsrs_result' : resolveStep('bsrs');
       case 'counselor': return bsrsComplete && needsCounselor ? 'counselor' : resolveStep('bsrs_result');
-      case 'feedback': return bsrsComplete && (!needsCounselor || counselorPassed) ? 'feedback' : resolveStep('counselor');
+      case 'survey': return bsrsComplete && (!needsCounselor || counselorPassed) ? 'survey' : resolveStep('counselor');
+      case 'done': return isChild ? 'kids_quiz' : resolveStep('survey');
       default: return step;
     }
   };
+  const startStep = (): Step => (completed ? 'done' : isChild ? 'kids_welcome' : 'welcome');
 
   // --- Effects ---
   // 讓手機的「返回」鍵回到上一關，而不是直接離開網頁
@@ -179,7 +229,7 @@ export default function App() {
       setCurrentStep(resolved);
       window.history.replaceState({ step: resolved }, '');
     }
-  }, [currentStep, quizPassed, bsrsComplete, needsCounselor, counselorPassed, hasCheckin]);
+  }, [currentStep, quizPassed, bsrsComplete, needsCounselor, counselorPassed, hasCheckin, completed, isChild]);
 
   useEffect(() => {
     if (currentStep === 'quiz' && shuffledQuiz.length === 0) {
@@ -191,7 +241,7 @@ export default function App() {
     document.documentElement.lang = HTML_LANG[lang];
   }, [lang]);
 
-  // 暫存進度：切去填 Google 表單、或手機重新整理頁面後，不會從頭開始
+  // 暫存進度：切去看簡訊、或手機重新整理頁面後，不會從頭開始
   useEffect(() => {
     const data: SavedState = {
       ts: Date.now(),
@@ -204,13 +254,39 @@ export default function App() {
       bsrsAnswers,
       counselorPassed,
       checkinCode,
+      checkinName,
+      ageGroup,
+      completed,
+      kidsAnswers,
+      kidsShowResults,
     };
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // 無痕模式等情況可能無法寫入，略過即可
     }
-  }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed, checkinCode]);
+  }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed, checkinCode, checkinName, ageGroup, completed, kidsAnswers, kidsShowResults]);
+
+  // 共用平板：閒置 10 分鐘自動清除並回到首頁，避免下一位看到前一位的結果
+  const lastActivity = useRef(Date.now());
+  const stepRef = useRef(currentStep);
+  stepRef.current = currentStep;
+  useEffect(() => {
+    if (!kiosk) return;
+    const mark = () => { lastActivity.current = Date.now(); };
+    const events = ['pointerdown', 'keydown', 'scroll'];
+    events.forEach(ev => window.addEventListener(ev, mark, { passive: true }));
+    const timer = window.setInterval(() => {
+      if (stepRef.current !== 'language' && Date.now() - lastActivity.current > KIOSK_IDLE_MS) {
+        lastActivity.current = Date.now();
+        resetAll();
+      }
+    }, 30000);
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, mark));
+      window.clearInterval(timer);
+    };
+  }, [kiosk]);
 
   useEffect(() => {
     if (!showCareModal) return;
@@ -228,14 +304,48 @@ export default function App() {
 
   const handleSelectLanguage = (selectedLang: Language) => {
     setLang(selectedLang);
-    goTo(hasCheckin ? 'welcome' : 'checkin');
+    goTo(hasCheckin ? startStep() : 'checkin');
   };
+
+  // 清除闖關進度（不含報到資料）
+  const clearProgress = () => {
+    setShuffledQuiz([]);
+    setQuizAnswers({});
+    setShowQuizResults(false);
+    setQuizPassed(false);
+    setQuizError(false);
+    setBsrsAnswers({});
+    setBsrsError(false);
+    setCounselorCode('');
+    setCodeError(false);
+    setCounselorPassed(false);
+    setKidsAnswers({});
+    setKidsShowResults(false);
+    setKidsError(false);
+    setSurvey(EMPTY_SURVEY);
+    setSurveyError(false);
+    setCompleteError(null);
+    setShowCareModal(false);
+  };
+
+  // 換成另一個序號（例如家長手機幫小朋友輸入）：先清掉上一位的所有進度
+  const applyCheckin = (code: string, age: AgeGroup, isCompleted: boolean, name: string) => {
+    if (code !== checkinCode) clearProgress();
+    setCheckinCode(code);
+    setAgeGroup(age);
+    setCompleted(isCompleted);
+    setCheckinName(name);
+    if (age === 'child') setLang('zh'); // 兒童版只有中文
+  };
+
+  const firstStepFor = (age: AgeGroup, isCompleted: boolean): Step =>
+    isCompleted ? 'done' : age === 'child' ? 'kids_welcome' : 'welcome';
 
   const handleCheckinRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (checkinBusy) return;
     const phone = normalizePhone(checkinPhone);
-    if (!checkinName.trim() || !checkinIdentity) {
+    if (!checkinNameInput.trim() || !checkinIdentity || !checkinAge) {
       setCheckinError('form');
       return;
     }
@@ -245,11 +355,11 @@ export default function App() {
     }
     setCheckinBusy(true);
     setCheckinError(null);
-    const result = await registerCheckin(checkinName.trim(), checkinIdentity, phone);
+    const result = await registerCheckin(checkinNameInput.trim(), checkinIdentity, checkinAge, phone);
     setCheckinBusy(false);
     if (result.ok) {
       playSound('success');
-      setCheckinCode(result.code!);
+      applyCheckin(result.code!, result.age ?? checkinAge, !!result.completed, checkinNameInput.trim());
       setCheckinDone({ code: result.code!, status: result.status ?? 'new', sms: result.sms });
     } else {
       playSound('wrong');
@@ -271,12 +381,42 @@ export default function App() {
     setCheckinBusy(false);
     if (result.ok) {
       playSound('success');
-      setCheckinCode(result.code!);
-      goTo('welcome');
+      const age = result.age ?? 'adult';
+      applyCheckin(result.code!, age, !!result.completed, '');
+      setCheckinCodeInput('');
+      goTo(firstStepFor(age, !!result.completed));
     } else {
       playSound('wrong');
       setCheckinError(result.error ?? 'server');
     }
+  };
+
+  // 使用其他序號：回到報到頁的「我已經有序號」
+  const handleUseOtherCode = () => {
+    setCheckinDone(null);
+    setCheckinMode('code');
+    setCheckinError(null);
+    goTo('checkin');
+  };
+
+  // 共用平板「換下一位」：清除所有資料回到首頁
+  const resetAll = () => {
+    clearProgress();
+    setCheckinCode('');
+    setCheckinName('');
+    setAgeGroup('adult');
+    setCompleted(false);
+    setCheckinDone(null);
+    setCheckinMode(kiosk ? 'code' : 'register');
+    setCheckinNameInput('');
+    setCheckinIdentity('');
+    setCheckinAge('');
+    setCheckinPhone('');
+    setCheckinCodeInput('');
+    setCheckinError(null);
+    setLang('zh');
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    goTo('language');
   };
 
   const resetQuiz = () => {
@@ -288,18 +428,54 @@ export default function App() {
   };
 
   const handleGoHome = () => {
-    setShuffledQuiz([]);
-    setQuizAnswers({});
-    setShowQuizResults(false);
-    setQuizPassed(false);
-    setQuizError(false);
-    setBsrsAnswers({});
-    setBsrsError(false);
-    setCounselorCode('');
-    setCodeError(false);
-    setCounselorPassed(false);
-    setShowCareModal(false);
-    goTo('welcome');
+    if (!hasCheckin) {
+      goTo('language');
+      return;
+    }
+    if (!completed) clearProgress();
+    goTo(startStep());
+  };
+
+  // --- 完成活動（送到報到系統標記「已完成」）---
+  const submitCompletion = async (surveyAnswers?: SurveyDraft) => {
+    if (completeBusy) return;
+    setCompleteBusy(true);
+    setCompleteError(null);
+    const result = await completeActivity(checkinCode, surveyAnswers);
+    setCompleteBusy(false);
+    if (result.ok) {
+      playSound('success');
+      setCompleted(true);
+      goTo('done');
+    } else {
+      playSound('wrong');
+      setCompleteError(result.error ?? 'server');
+    }
+  };
+
+  const handleSurveySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const missing = !survey.gender ? 'sv-gender' : !survey.q1 ? 'sv-q1' : !survey.q2 ? 'sv-q2' : !survey.q3 ? 'sv-q3' : '';
+    if (missing) {
+      setSurveyError(true);
+      scrollToElement(missing, 100);
+      return;
+    }
+    setSurveyError(false);
+    submitCompletion({ ...survey, q4: survey.q4.trim() });
+  };
+
+  const handleKidsSubmit = () => {
+    const firstUnanswered = KIDS_QUIZ_QUESTIONS.find(q => !kidsAnswers[q.id]);
+    if (firstUnanswered) {
+      setKidsError(true);
+      scrollToElement(`kids-q-${firstUnanswered.id}`, 110);
+      return;
+    }
+    setKidsError(false);
+    playSound('success');
+    setKidsShowResults(true);
+    setTimeout(() => scrollToElement('kids-top', 120), 100);
   };
 
   const handleQuizSubmit = () => {
@@ -344,7 +520,7 @@ export default function App() {
       setCodeError(false);
       setCounselorPassed(true);
       playSound('success');
-      goTo('feedback');
+      goTo('survey');
     } else {
       setCodeError(true);
       playSound('wrong');
@@ -428,11 +604,15 @@ export default function App() {
       quiz: pick('第一關：知識挑戰', 'Step 1: Quiz', 'Chặng 1: Kiến thức'),
       bsrs: pick('第二關：心情溫度計', 'Step 2: BSRS-5', 'Chặng 2: BSRS-5'),
       bsrs_result: pick('檢測結果', 'Result', 'Kết quả'),
-      counselor: pick('最後一步', 'Final Step', 'Bước cuối'),
-      feedback: pick('最後一步', 'Final Step', 'Bước cuối'),
+      counselor: pick('心理師關懷', 'Counselor', 'Tư vấn'),
+      survey: pick('最後一步：活動問卷', 'Final Step: Survey', 'Bước cuối: Khảo sát'),
+      kids_welcome: '準備開始',
+      kids_quiz: '認識情緒行為障礙',
+      done: pick('完成！', 'Done!', 'Hoàn thành!'),
     };
     const progress: Record<Exclude<Step, 'language'>, string> = {
-      checkin: '5%', welcome: '10%', quiz: '30%', bsrs: '60%', bsrs_result: '85%', counselor: '100%', feedback: '100%',
+      checkin: '5%', welcome: '10%', quiz: '30%', bsrs: '50%', bsrs_result: '65%', counselor: '75%', survey: '85%',
+      kids_welcome: '15%', kids_quiz: '55%', done: '100%',
     };
     const step = currentStep as Exclude<Step, 'language'>;
     return (
@@ -517,23 +697,36 @@ export default function App() {
       case 'form':
       case 'invalid_name':
       case 'invalid_identity':
-        return pick('請填寫姓名並選擇身分。', 'Please enter your name and choose your role.', 'Vui lòng nhập họ tên và chọn đối tượng.');
+      case 'invalid_age':
+        return pick('請填寫姓名，並選擇身分與年齡。', 'Please enter your name and choose your role and age group.', 'Vui lòng nhập họ tên, chọn đối tượng và nhóm tuổi.');
       case 'invalid_phone':
         return pick('請輸入正確的手機號碼（09 開頭共 10 碼）。', 'Please enter a valid Taiwan mobile number (10 digits starting with 09).', 'Vui lòng nhập số điện thoại di động Đài Loan hợp lệ (10 số, bắt đầu bằng 09).');
       case 'phone_taken':
         return pick(
-          '這支手機已經報到過了。如果是你本人，請填寫和報到時相同的姓名，或改用「我已經有兌換碼」。',
+          '這支手機已經報到過了。如果是你本人，請填寫和報到時相同的姓名，或改用「我已經有序號」。',
           'This number has already checked in. If it is yours, enter the same name you used before, or choose "I already have a code".',
-          'Số điện thoại này đã điểm danh. Nếu là bạn, hãy nhập đúng họ tên đã dùng trước đó, hoặc chọn "Tôi đã có mã".'
+          'Số điện thoại này đã điểm danh. Nếu là bạn, hãy nhập đúng họ tên đã dùng trước đó, hoặc chọn "Tôi đã có mã số".'
         );
       case 'full':
-        return pick('兌換碼已全部發放完畢，請洽現場工作人員。', 'All codes have been issued. Please ask our staff.', 'Đã phát hết mã đổi quà. Vui lòng liên hệ nhân viên.');
+        return pick('序號已全部發放完畢，請洽現場工作人員。', 'All codes have been issued. Please ask our staff.', 'Đã phát hết mã số. Vui lòng liên hệ nhân viên.');
       case 'not_found':
-        return pick('查無此兌換碼，請確認簡訊上的兌換碼（例如 SEM012）。', 'Code not found. Please check the code in your SMS (e.g. SEM012).', 'Không tìm thấy mã. Vui lòng kiểm tra mã trong tin nhắn (ví dụ SEM012).');
+        return pick('查無此序號，請確認簡訊或工作人員給你的序號（例如 SEM012）。', 'Code not found. Please check the code from your SMS or our staff (e.g. SEM012).', 'Không tìm thấy mã số. Vui lòng kiểm tra mã trong tin nhắn hoặc do nhân viên cung cấp (ví dụ SEM012).');
       default:
         return pick('網路不穩或系統忙碌，請稍後再試一次。', 'Connection problem or system busy. Please try again.', 'Mạng không ổn định hoặc hệ thống đang bận. Vui lòng thử lại.');
     }
   };
+
+  // 連線類錯誤一直失敗時，請參加者到櫃台由工作人員協助
+  const renderCounterHint = (error: CheckinError | 'form' | null) =>
+    (error === 'network' || error === 'server' || error === 'busy') && (
+      <span className="block mt-2 font-semibold">
+        {pick(
+          '如果一直無法完成，請到報到櫃台，由工作人員協助。',
+          'If this keeps failing, please go to the check-in counter for help.',
+          'Nếu vẫn không được, vui lòng đến quầy điểm danh để nhân viên hỗ trợ.'
+        )}
+      </span>
+    );
 
   const renderCheckin = () => {
     const tabBtn = (mode: 'register' | 'code', label: string) => (
@@ -547,9 +740,10 @@ export default function App() {
       </button>
     );
     const inputCls = 'w-full bg-white border-2 border-gray-100 focus:border-teal-400 focus:outline-none rounded-2xl px-4 py-3.5 text-base';
-    const showBackup = checkinError === 'network' || checkinError === 'server' || checkinError === 'busy';
+    const choiceCls = (on: boolean) =>
+      `cursor-pointer text-center rounded-2xl border-2 px-2 py-3 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-300 ${on ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-gray-100 bg-white text-gray-700 hover:border-teal-200'}`;
 
-    const done = checkinDone ?? (checkinCode ? { code: checkinCode, status: 'existing' as const } : null);
+    const done = checkinDone;
     if (done) {
       return (
         <motion.div
@@ -561,20 +755,29 @@ export default function App() {
             <h2 className="text-2xl font-bold">
               {done.status === 'existing'
                 ? pick('歡迎回來！', 'Welcome back!', 'Chào mừng bạn quay lại!')
-                : pick('報到完成！', 'You’re checked in!', 'Điểm danh thành công!')}
+                : pick('✓ 已報到', '✓ Checked in', '✓ Đã điểm danh')}
             </h2>
+            {checkinName && <p className="text-lg font-semibold">{checkinName}</p>}
             <div className="bg-white rounded-2xl py-5 px-4">
-              <p className="text-xs font-semibold text-teal-700 tracking-wide">{pick('你的兌換碼', 'Your redemption code', 'Mã đổi quà của bạn')}</p>
+              <p className="text-xs font-semibold text-teal-700 tracking-wide">{pick('你的序號', 'Your code', 'Mã số của bạn')}</p>
               <p className="text-4xl font-black text-teal-800 tracking-[0.15em] tabular-nums mt-1">{done.code}</p>
             </div>
             <p className="text-sm text-teal-50 leading-relaxed">
               {done.status === 'new'
-                ? pick('兌換碼也會用簡訊傳到你的手機。完成所有關卡後，憑兌換碼領取空氣鳳梨。', 'The code will also be sent to your phone by SMS. Finish all stages and show this code to get your air plant.', 'Mã cũng sẽ được gửi qua tin nhắn SMS. Hoàn thành tất cả các chặng và xuất trình mã này để nhận cây không khí.')
-                : pick('這是你之前報到時取得的兌換碼。', 'This is the code from your earlier check-in.', 'Đây là mã từ lần điểm danh trước của bạn.')}
+                ? pick('請把這個畫面給入口工作人員看。序號也會用簡訊傳到你的手機，完成活動後憑序號領取空氣鳳梨。', 'Please show this screen to the staff at the entrance. The code will also be sent by SMS—finish the activity and show it to get your air plant.', 'Vui lòng đưa màn hình này cho nhân viên ở lối vào. Mã số cũng được gửi qua SMS—hoàn thành hoạt động và xuất trình mã để nhận cây không khí.')
+                : pick('這是你之前報到時取得的序號。', 'This is the code from your earlier check-in.', 'Đây là mã số từ lần điểm danh trước của bạn.')}
             </p>
+            {done.status === 'new' && checkinPhone && done.sms === false && (
+              <p className="text-xs text-yellow-200">
+                {pick('（簡訊可能沒有送達，請記下或截圖這個序號）', '(The SMS may not have arrived—please note down or screenshot this code.)', '(Tin nhắn có thể chưa đến—vui lòng ghi lại hoặc chụp màn hình mã số này.)')}
+              </p>
+            )}
           </div>
-          <button onClick={() => goTo('welcome')} className={primaryBtn}>
-            {pick('開始闖關', 'Start the activity', 'Bắt đầu')} <ArrowRight className="w-5 h-5" />
+          <button onClick={() => goTo(firstStepFor(ageGroup, completed))} className={primaryBtn}>
+            {completed
+              ? pick('查看完成畫面', 'View completion screen', 'Xem màn hình hoàn thành')
+              : isChild ? '開始' : pick('開始闖關', 'Start the activity', 'Bắt đầu')}
+            <ArrowRight className="w-5 h-5" />
           </button>
         </motion.div>
       );
@@ -592,16 +795,16 @@ export default function App() {
           <h1 className="text-2xl font-bold text-gray-900">{pick('活動報到', 'Event Check-in', 'Điểm danh sự kiện')}</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
             {pick(
-              '報到後會取得兌換碼，完成闖關就能憑碼領取空氣鳳梨！',
-              'Check in to get your redemption code, then complete the activity to claim an air plant!',
-              'Điểm danh để nhận mã đổi quà, hoàn thành hoạt động để nhận cây không khí!'
+              '報到後會取得序號，完成活動就能憑序號領取空氣鳳梨！',
+              'Check in to get your code, then complete the activity to claim an air plant!',
+              'Điểm danh để nhận mã số, hoàn thành hoạt động để nhận cây không khí!'
             )}
           </p>
         </div>
 
         <div className="flex gap-1 bg-teal-50/90 p-1 rounded-2xl border border-teal-100">
           {tabBtn('register', pick('我要報到', 'Check in', 'Điểm danh'))}
-          {tabBtn('code', pick('我已經有兌換碼', 'I already have a code', 'Tôi đã có mã'))}
+          {tabBtn('code', pick('我已經有序號', 'I already have a code', 'Tôi đã có mã số'))}
         </div>
 
         {checkinMode === 'register' ? (
@@ -610,8 +813,8 @@ export default function App() {
               <label htmlFor="ci-name" className="block text-sm font-semibold text-gray-800">{pick('姓名', 'Name', 'Họ tên')}</label>
               <input
                 id="ci-name" type="text" autoComplete="name" maxLength={40}
-                value={checkinName}
-                onChange={e => { setCheckinName(e.target.value); setCheckinError(null); }}
+                value={checkinNameInput}
+                onChange={e => { setCheckinNameInput(e.target.value); setCheckinError(null); }}
                 className={inputCls}
               />
             </div>
@@ -620,14 +823,27 @@ export default function App() {
               <legend className="block text-sm font-semibold text-gray-800 mb-2">{pick('身分', 'Role', 'Đối tượng')}</legend>
               <div className="grid grid-cols-3 gap-2">
                 {CHECKIN_IDENTITIES.map(opt => (
-                  <label
-                    key={opt.value}
-                    className={`cursor-pointer text-center rounded-2xl border-2 px-2 py-3 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-300 ${checkinIdentity === opt.value ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-gray-100 bg-white text-gray-700 hover:border-teal-200'}`}
-                  >
+                  <label key={opt.value} className={`${choiceCls(checkinIdentity === opt.value)} flex items-center justify-center leading-snug`}>
                     <input
                       type="radio" name="ci-identity" value={opt.value} className="sr-only"
                       checked={checkinIdentity === opt.value}
                       onChange={() => { setCheckinIdentity(opt.value); setCheckinError(null); }}
+                    />
+                    {opt.label[lang]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="space-y-2">
+              <legend className="block text-sm font-semibold text-gray-800 mb-2">{pick('年齡', 'Age', 'Độ tuổi')}</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {CHECKIN_AGES.map(opt => (
+                  <label key={opt.value} className={choiceCls(checkinAge === opt.value)}>
+                    <input
+                      type="radio" name="ci-age" value={opt.value} className="sr-only"
+                      checked={checkinAge === opt.value}
+                      onChange={() => { setCheckinAge(opt.value); setCheckinError(null); }}
                     />
                     {opt.label[lang]}
                   </label>
@@ -643,17 +859,19 @@ export default function App() {
                 onChange={e => { setCheckinPhone(e.target.value.replace(/[^\d+\-\s]/g, '').slice(0, 16)); setCheckinError(null); }}
                 className={`${inputCls} tracking-wider`}
               />
-              <p className="text-xs text-gray-500">{pick('兌換碼會以簡訊傳送到這支手機。', 'Your code will be sent to this number by SMS.', 'Mã đổi quà sẽ được gửi qua SMS đến số này.')}</p>
+              <p className="text-xs text-gray-500">
+                {pick(
+                  '序號會以簡訊傳送到這支手機。沒有手機的人，請到櫃台由工作人員代為報到。',
+                  'Your code will be sent to this number by SMS. No phone? Our staff at the counter can check you in.',
+                  'Mã số sẽ được gửi qua SMS đến số này. Không có điện thoại? Nhân viên tại quầy sẽ điểm danh giúp bạn.'
+                )}
+              </p>
             </div>
 
             {checkinError && (
               <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
                 {checkinErrorText(checkinError)}
-                {showBackup && (
-                  <a href={BACKUP_CHECKIN_FORM_URL} target="_blank" rel="noopener noreferrer" className="block mt-2 font-semibold underline">
-                    {pick('改用備用報到表單 →', 'Use the backup check-in form →', 'Dùng biểu mẫu điểm danh dự phòng →')}
-                  </a>
-                )}
+                {renderCounterHint(checkinError)}
               </div>
             )}
 
@@ -665,9 +883,9 @@ export default function App() {
 
             <p className="text-[11px] text-gray-400 leading-relaxed">
               {pick(
-                '個資告知：修平科技大學學生發展中心蒐集你的姓名、身分與手機號碼，僅用於本次活動報到、發送兌換碼簡訊及領取核對，不作其他用途。',
-                'Privacy notice: HUST Student Development Center collects your name, role and mobile number only for event check-in, sending your code by SMS and verifying gift pickup, and for no other purpose.',
-                'Thông báo bảo mật: Trung tâm Phát triển Sinh viên HUST thu thập họ tên, đối tượng và số điện thoại của bạn chỉ để điểm danh, gửi mã qua SMS và xác nhận nhận quà, không dùng cho mục đích khác.'
+                '個資告知：修平科技大學學生發展中心蒐集你的姓名、身分、年齡組別與手機號碼，僅用於本次活動報到、發送序號簡訊及領取核對，不作其他用途。',
+                'Privacy notice: HUST Student Development Center collects your name, role, age group and mobile number only for event check-in, sending your code by SMS and verifying gift pickup, and for no other purpose.',
+                'Thông báo bảo mật: Trung tâm Phát triển Sinh viên HUST thu thập họ tên, đối tượng, nhóm tuổi và số điện thoại của bạn chỉ để điểm danh, gửi mã số qua SMS và xác nhận nhận quà, không dùng cho mục đích khác.'
               )}
             </p>
           </form>
@@ -675,7 +893,7 @@ export default function App() {
           <form onSubmit={handleCheckinVerify} className="bg-white/95 rounded-3xl p-6 shadow-sm border border-white space-y-5" noValidate>
             <div className="space-y-2">
               <label htmlFor="ci-code" className="block text-sm font-semibold text-gray-800">
-                {pick('輸入簡訊中的兌換碼', 'Enter the code from your SMS', 'Nhập mã trong tin nhắn SMS')}
+                {pick('輸入序號（簡訊中或工作人員給你的）', 'Enter your code (from SMS or our staff)', 'Nhập mã số (trong SMS hoặc do nhân viên cung cấp)')}
               </label>
               <input
                 id="ci-code" type="text" autoComplete="off" autoCapitalize="characters" placeholder="SEM012"
@@ -687,13 +905,23 @@ export default function App() {
             {checkinError && (
               <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
                 {checkinErrorText(checkinError)}
+                {renderCounterHint(checkinError)}
               </div>
             )}
             <button type="submit" disabled={checkinBusy || !checkinCodeInput.trim()} className={`${primaryBtn} disabled:opacity-60`}>
               {checkinBusy
                 ? <><Loader2 className="w-5 h-5 animate-spin" /> {pick('確認中…', 'Checking…', 'Đang kiểm tra…')}</>
-                : <>{pick('確認兌換碼', 'Verify code', 'Xác nhận mã')} <ArrowRight className="w-5 h-5" /></>}
+                : <>{pick('確認序號', 'Verify code', 'Xác nhận mã số')} <ArrowRight className="w-5 h-5" /></>}
             </button>
+            {checkinCode && (
+              <p className="text-xs text-gray-500 text-center leading-relaxed">
+                {pick(
+                  `輸入新的序號後，目前序號 ${checkinCode} 在這台裝置上的進度會被清除。`,
+                  `Entering a new code clears this device's progress for ${checkinCode}.`,
+                  `Nhập mã số mới sẽ xóa tiến trình của ${checkinCode} trên thiết bị này.`
+                )}
+              </p>
+            )}
           </form>
         )}
       </motion.div>
@@ -724,9 +952,9 @@ export default function App() {
         <Lock className="w-4 h-4 shrink-0 mt-0.5 text-teal-600" />
         <p>
           {pick(
-            '小測驗與心情溫度計的作答只在你的手機上計算，不會上傳或儲存，請放心填答。',
-            'Your quiz and Emotion Thermometer answers are calculated only on your device. They are never uploaded or stored, so feel free to answer honestly.',
-            'Câu trả lời bài kiểm tra và Nhiệt kế cảm xúc chỉ được tính trên thiết bị của bạn, không tải lên hay lưu trữ. Bạn cứ yên tâm trả lời.'
+            '小測驗與心情溫度計的作答只在你的裝置上計算，不會上傳或儲存；最後的活動問卷為匿名填寫。請放心作答。',
+            'Your quiz and Emotion Thermometer answers are calculated only on your device and are never uploaded or stored. The final survey is anonymous. Feel free to answer honestly.',
+            'Câu trả lời bài kiểm tra và Nhiệt kế cảm xúc chỉ được tính trên thiết bị của bạn, không tải lên hay lưu trữ. Khảo sát cuối cùng là ẩn danh. Bạn cứ yên tâm trả lời.'
           )}
         </p>
       </div>
@@ -735,12 +963,146 @@ export default function App() {
         {UI_TEXT.goToQuiz[lang]} <ArrowRight className="w-5 h-5" />
       </button>
 
-      <button
-        onClick={() => goTo('language')}
-        className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-teal-700 py-1"
-      >
-        <Globe2 className="w-4 h-4" /> 語言 / Language / Ngôn ngữ
+      <div className="flex justify-center gap-5">
+        <button
+          onClick={() => goTo('language')}
+          className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-teal-700 py-1"
+        >
+          <Globe2 className="w-4 h-4" /> 語言 / Language / Ngôn ngữ
+        </button>
+        {renderOtherCodeLink()}
+      </div>
+    </motion.div>
+  );
+
+  const renderOtherCodeLink = () => (
+    <button
+      onClick={handleUseOtherCode}
+      className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-teal-700 py-1"
+    >
+      <UserRoundPlus className="w-4 h-4" /> {pick('輸入其他序號', 'Use another code', 'Dùng mã số khác')}
+    </button>
+  );
+
+  const renderKidsWelcome = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+      className="max-w-md mx-auto px-6 pb-6 space-y-7"
+    >
+      <div className="flex justify-center pt-2">
+        <div className="w-36 h-36 bg-white rounded-[2rem] shadow-lg shadow-teal-900/10 flex items-center justify-center overflow-hidden">
+          {renderLogo('w-full h-full object-contain p-3')}
+        </div>
+      </div>
+      <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-snug whitespace-pre-line text-center">
+        {KIDS_INTRO.title}
+      </h1>
+      <div className="bg-white/95 p-6 rounded-3xl border border-white shadow-sm space-y-4 text-gray-700 leading-loose text-[17px]">
+        {KIDS_INTRO.paragraphs.map((p, idx) => <p key={idx}>{p}</p>)}
+      </div>
+      <button onClick={() => goTo('kids_quiz')} className={primaryBtn}>
+        開始小測驗 <ArrowRight className="w-5 h-5" />
       </button>
+      <div className="flex justify-center">{renderOtherCodeLink()}</div>
+    </motion.div>
+  );
+
+  const renderKidsQuiz = () => (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+      className="max-w-md mx-auto px-6 pb-20 space-y-8"
+    >
+      <div className="bg-white/90 p-5 rounded-3xl border border-teal-100 shadow-sm">
+        <p className="text-gray-700 text-base leading-relaxed font-medium">{KIDS_QUIZ_INTRO}</p>
+      </div>
+
+      {kidsError && (
+        <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium">
+          ⚠️ 還有題目沒有選喔！請每一題都選一個答案。
+        </div>
+      )}
+
+      <div id="kids-top" className="space-y-6">
+        {KIDS_QUIZ_QUESTIONS.map((q, idx) => {
+          const selected = kidsAnswers[q.id];
+          const isCorrect = selected === q.correctAnswerId;
+          return (
+            <div
+              key={q.id}
+              id={`kids-q-${q.id}`}
+              className={`bg-white rounded-3xl shadow-sm border p-5 space-y-4 ${kidsError && !selected ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
+            >
+              <p className="font-bold text-gray-900 text-lg leading-relaxed">
+                <span className="text-teal-600 mr-2">{idx + 1}.</span>{q.question}
+              </p>
+              <div className="space-y-2.5">
+                {q.options.map(opt => {
+                  const isSelected = selected === opt.id;
+                  const isAnswer = opt.id === q.correctAnswerId;
+                  let cls = 'flex items-start gap-3 p-3.5 rounded-2xl border-2 text-base text-left w-full transition-colors ';
+                  if (kidsShowResults) {
+                    if (isAnswer) cls += 'border-green-500 bg-green-50 text-green-800 font-bold';
+                    else if (isSelected) cls += 'border-red-300 bg-red-50 text-red-800';
+                    else cls += 'border-gray-100 text-gray-400';
+                  } else if (isSelected) {
+                    cls += 'border-teal-500 bg-teal-50 text-teal-900';
+                  } else {
+                    cls += 'border-gray-100 text-gray-700 hover:bg-gray-50';
+                  }
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      disabled={kidsShowResults}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setKidsAnswers(prev => ({ ...prev, [q.id]: opt.id }));
+                        setKidsError(false);
+                        playSound('click');
+                      }}
+                      className={cls}
+                    >
+                      <span className="shrink-0 font-bold">{opt.id}.</span>
+                      <span className="flex-1">{opt.text}</span>
+                      {kidsShowResults && isAnswer && <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+              {kidsShowResults && (
+                <div className={`p-4 rounded-2xl text-base leading-relaxed flex items-start gap-3 ${isCorrect ? 'bg-green-50 text-green-900' : 'bg-orange-50 text-orange-900'}`}>
+                  <Lightbulb className={`w-5 h-5 shrink-0 mt-1 ${isCorrect ? 'text-green-600' : 'text-orange-600'}`} />
+                  <div>
+                    <p className="font-bold mb-1">{isCorrect ? '✅ 答對了！' : `💡 正確答案是 ${q.correctAnswerId}`}</p>
+                    <p>{q.explanation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {completeError && (
+        <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
+          {checkinErrorText(completeError)}
+          {renderCounterHint(completeError === 'not_found' ? 'server' : completeError)}
+        </div>
+      )}
+
+      {!kidsShowResults ? (
+        <button onClick={handleKidsSubmit} className={`${primaryBtn} sticky bottom-6 shadow-lg shadow-teal-900/20 z-10`}>
+          看解答 <CheckCircle2 className="w-5 h-5" />
+        </button>
+      ) : (
+        <button
+          onClick={() => submitCompletion()}
+          disabled={completeBusy}
+          className={`${primaryBtn} sticky bottom-6 shadow-lg shadow-teal-900/20 z-10 disabled:opacity-70`}
+        >
+          {completeBusy ? <><Loader2 className="w-5 h-5 animate-spin" /> 送出中…</> : <>完成 <CheckCircle2 className="w-5 h-5" /></>}
+        </button>
+      )}
     </motion.div>
   );
 
@@ -1070,10 +1432,10 @@ export default function App() {
 
         {needsCounselor && renderHelpResources(tone === 'red' ? 'red' : 'orange')}
 
-        <button onClick={() => goTo(needsCounselor ? 'counselor' : 'feedback')} className={primaryBtn}>
+        <button onClick={() => goTo(needsCounselor ? 'counselor' : 'survey')} className={primaryBtn}>
           {needsCounselor
             ? pick('了解後續建議', 'View Recommendations', 'Xem khuyến nghị')
-            : pick('前往填寫回饋表單', 'Go to Feedback Form', 'Đi đến Biểu mẫu Phản hồi')}
+            : pick('下一步：活動問卷', 'Next: Event Survey', 'Tiếp theo: Khảo sát')}
           <ArrowRight className="w-5 h-5" />
         </button>
       </motion.div>
@@ -1114,9 +1476,9 @@ export default function App() {
         <form onSubmit={handleVerifyCode} className="pt-6 border-t border-orange-200/60 space-y-4">
           <label htmlFor="counselor-code" className="block text-xs text-gray-500 leading-relaxed">
             {pick(
-              '對談結束後，請向心理師索取四位數通關密碼，以解鎖後續兌換流程。',
-              'After the conversation, please ask the counselor for a 4-digit passcode to unlock the redemption process.',
-              'Sau khi trò chuyện, vui lòng xin chuyên viên tư vấn mật mã 4 chữ số để mở khóa quy trình đổi quà.'
+              '對談結束後，請向心理師索取四位數通關密碼，以繼續完成活動。',
+              'After the conversation, please ask the counselor for a 4-digit passcode to continue the activity.',
+              'Sau khi trò chuyện, vui lòng xin chuyên viên tư vấn mật mã 4 chữ số để tiếp tục hoạt động.'
             )}
           </label>
           <input
@@ -1152,7 +1514,7 @@ export default function App() {
     </motion.div>
   );
 
-  const renderFeedback = () => (
+  const renderDone = () => (
     <motion.div
       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
       className="max-w-md mx-auto px-6 pb-6 pt-4 space-y-6"
@@ -1183,54 +1545,164 @@ export default function App() {
           </motion.div>
 
           <div className="space-y-2 text-center mt-2">
-            <h2 className="text-3xl font-bold tracking-wider">{pick('最後一步', 'Final Step', 'Bước cuối cùng')}</h2>
+            <h2 className="text-3xl font-bold tracking-wider">{pick('✓ 已完成', '✓ Completed', '✓ Hoàn thành')}</h2>
+            {checkinName && <p className="text-lg font-semibold">{checkinName}</p>}
             <p className="text-teal-50 font-medium tracking-wide">
-              {pick('填寫回饋表單領取空氣鳳梨', 'Fill out the form to get your air plant', 'Điền vào biểu mẫu để nhận cây không khí')}
+              {isChild ? '你好棒！可以去領取空氣鳳梨囉！' : pick('恭喜完成活動，可以領取空氣鳳梨囉！', 'You did it! You can now claim your air plant!', 'Chúc mừng bạn đã hoàn thành! Bạn có thể nhận cây không khí!')}
             </p>
           </div>
         </div>
 
-        <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 text-center space-y-2 text-sm leading-relaxed">
-          <p>
-            {pick(
-              '感謝您的參與！請點擊下方按鈕前往填寫活動滿意度問卷。',
-              'Thank you for participating! Please click the button below to fill out the satisfaction survey.',
-              'Cảm ơn bạn đã tham gia! Vui lòng nhấp vào nút bên dưới để điền vào cuộc khảo sát mức độ hài lòng.'
-            )}
-          </p>
-          <p className="font-bold text-yellow-300 text-base">
-            {pick(
-              '完成表單後，請直接將「表單送出成功畫面」出示給工作人員，即可領取專屬空氣鳳梨！',
-              'After completing the form, simply show the "Form Submitted" screen to the staff to claim your exclusive air plant!',
-              'Sau khi hoàn thành biểu mẫu, chỉ cần đưa màn hình "Đã gửi biểu mẫu" cho nhân viên để nhận cây không khí độc quyền của bạn!'
-            )}
+        <div className="relative z-10 bg-white rounded-2xl px-5 py-4 text-center shadow-lg">
+          <p className="text-xs font-semibold text-teal-700 tracking-wide">{pick('你的序號', 'Your code', 'Mã số của bạn')}</p>
+          <p className="text-4xl font-black text-teal-800 tracking-[0.15em] tabular-nums mt-1">{checkinCode}</p>
+        </div>
+
+        <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-center text-sm leading-relaxed">
+          <p className="font-bold text-yellow-200 text-base">
+            {isChild
+              ? '請到領取處，告訴工作人員你的序號和名字。'
+              : pick(
+                '請到領取處告訴工作人員你的序號，並說出姓名核對。',
+                'Go to the pickup counter, tell the staff your code and say your name for verification.',
+                'Hãy đến quầy nhận quà, cho nhân viên biết mã số và nói họ tên của bạn để đối chiếu.'
+              )}
           </p>
         </div>
 
-        {checkinCode && (
-          <div className="relative z-10 bg-white rounded-2xl px-5 py-4 text-center shadow-lg">
-            <p className="text-xs font-semibold text-teal-700 tracking-wide">
-              {pick('領取時請出示兌換碼', 'Show this code when claiming', 'Xuất trình mã đổi quà khi nhận')}
-            </p>
-            <p className="text-3xl font-black text-teal-800 tracking-[0.15em] tabular-nums mt-1">{checkinCode}</p>
-          </div>
-        )}
-
-        <div className="relative z-10 pt-2">
+        <div className="relative z-10 pt-1">
           <button
             onClick={() => setShowCareModal(true)}
             className="w-full bg-white hover:bg-teal-50 text-teal-700 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg"
           >
-            {pick('前往填寫問卷', 'Go to Feedback Form', 'Đi đến Biểu mẫu Phản hồi')} <ArrowRight className="w-5 h-5" />
+            <Sprout className="w-5 h-5" /> {pick('空氣鳳梨照顧方法', 'How to care for your air plant', 'Cách chăm sóc cây không khí')}
           </button>
         </div>
       </div>
+
+      {kiosk ? (
+        <button onClick={resetAll} className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg">
+          {pick('完成，換下一位', 'Done — next person', 'Xong — người tiếp theo')} <RotateCcw className="w-5 h-5" />
+        </button>
+      ) : (
+        <div className="flex justify-center">{renderOtherCodeLink()}</div>
+      )}
 
       <p className="text-gray-600 text-sm text-center">
         {pick('感謝您的參與，祝您有美好的一天！', 'Thank you for participating, have a wonderful day!', 'Cảm ơn bạn đã tham gia, chúc bạn một ngày tốt lành!')}
       </p>
     </motion.div>
   );
+
+  const renderSurvey = () => {
+    const scale = (key: 'q2' | 'q3', id: string, question: string) => (
+      <fieldset
+        id={id}
+        className={`bg-white p-5 rounded-3xl shadow-sm border space-y-4 ${surveyError && !survey[key] ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
+      >
+        <legend className="sr-only">{question}</legend>
+        <p className="font-semibold text-gray-900 text-[15px] leading-relaxed" aria-hidden="true">{question}</p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {[1, 2, 3, 4, 5].map(v => {
+            const checked = survey[key] === v;
+            return (
+              <label key={v} className="flex flex-col items-center cursor-pointer">
+                <span className={`w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-300 ${checked ? 'border-teal-500 bg-teal-500 text-white shadow-md shadow-teal-900/20' : 'border-gray-200 text-gray-500 hover:border-teal-300'}`}>
+                  <input
+                    type="radio" name={key} value={v} checked={checked} className="sr-only"
+                    onChange={() => { setSurvey(prev => ({ ...prev, [key]: v })); setSurveyError(false); playSound('click'); }}
+                  />
+                  {v}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>1 {SURVEY.scaleLow[lang]}</span>
+          <span>5 {SURVEY.scaleHigh[lang]}</span>
+        </div>
+      </fieldset>
+    );
+
+    const choice = (key: 'gender' | 'q1', id: string, question: string, options: { value: string; label: Record<Language, string> }[]) => (
+      <fieldset
+        id={id}
+        className={`bg-white p-5 rounded-3xl shadow-sm border space-y-3 ${surveyError && !survey[key] ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
+      >
+        <legend className="sr-only">{question}</legend>
+        <p className="font-semibold text-gray-900 text-[15px] leading-relaxed" aria-hidden="true">{question}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {options.map(opt => {
+            const checked = survey[key] === opt.value;
+            return (
+              <label
+                key={opt.value}
+                className={`cursor-pointer text-center rounded-2xl border-2 px-2 py-3 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-300 ${checked ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-gray-100 bg-white text-gray-700 hover:border-teal-200'}`}
+              >
+                <input
+                  type="radio" name={key} value={opt.value} checked={checked} className="sr-only"
+                  onChange={() => { setSurvey(prev => ({ ...prev, [key]: opt.value })); setSurveyError(false); playSound('click'); }}
+                />
+                {opt.label[lang]}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    );
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+        className="max-w-md mx-auto px-6 pb-6 space-y-6"
+      >
+        <div className="bg-white/90 p-5 rounded-3xl border border-teal-100 shadow-sm space-y-2">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-teal-600" />
+            <h2 className="text-xl font-bold text-gray-900">{SURVEY.title[lang]}</h2>
+          </div>
+          <p className="text-gray-600 text-sm leading-relaxed">{SURVEY.intro[lang]}</p>
+        </div>
+
+        {surveyError && (
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium">
+            ⚠️ {pick('還有必填的題目沒有作答喔！', 'Please answer all required questions.', 'Vui lòng trả lời tất cả các câu hỏi bắt buộc.')}
+          </div>
+        )}
+
+        <form onSubmit={handleSurveySubmit} className="space-y-5" noValidate>
+          {choice('gender', 'sv-gender', SURVEY.gender.question[lang], SURVEY.gender.options.map(o => ({ value: o.value, label: o.label })))}
+          {choice('q1', 'sv-q1', SURVEY.q1.question[lang], SURVEY.q1.options.map(o => ({ value: o.value, label: o.label })))}
+          {scale('q2', 'sv-q2', SURVEY.q2[lang])}
+          {scale('q3', 'sv-q3', SURVEY.q3[lang])}
+
+          <div className="bg-white p-5 rounded-3xl shadow-sm border border-white space-y-3">
+            <label htmlFor="sv-q4" className="block font-semibold text-gray-900 text-[15px] leading-relaxed">{SURVEY.q4[lang]}</label>
+            <textarea
+              id="sv-q4" rows={4} maxLength={500}
+              value={survey.q4}
+              onChange={e => setSurvey(prev => ({ ...prev, q4: e.target.value }))}
+              className="w-full bg-white border-2 border-gray-100 focus:border-teal-400 focus:outline-none rounded-2xl px-4 py-3 text-base resize-none"
+            />
+          </div>
+
+          {completeError && (
+            <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm leading-relaxed">
+              {checkinErrorText(completeError === 'invalid_survey' ? 'server' : completeError)}
+              {renderCounterHint(completeError === 'not_found' || completeError === 'invalid_survey' ? 'server' : completeError)}
+            </div>
+          )}
+
+          <button type="submit" disabled={completeBusy} className={`${primaryBtn} disabled:opacity-70`}>
+            {completeBusy
+              ? <><Loader2 className="w-5 h-5 animate-spin" /> {pick('送出中…', 'Submitting…', 'Đang gửi…')}</>
+              : <>{pick('送出問卷，完成活動', 'Submit and finish', 'Gửi và hoàn thành')} <CheckCircle2 className="w-5 h-5" /></>}
+          </button>
+        </form>
+      </motion.div>
+    );
+  };
 
   const renderCareModal = () => (
     <AnimatePresence>
@@ -1272,15 +1744,9 @@ export default function App() {
                 />
               </div>
 
-              <a
-                href={FEEDBACK_FORM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCareModal(false)}
-                className={`${primaryBtn} mt-4`}
-              >
-                {pick('我知道了，前往問卷', 'Got it, go to form', 'Tôi hiểu rồi, đến biểu mẫu')} <ArrowRight className="w-5 h-5" />
-              </a>
+              <button type="button" onClick={() => setShowCareModal(false)} className={`${primaryBtn} mt-4`}>
+                {pick('我知道了', 'Got it', 'Tôi hiểu rồi')} <CheckCircle2 className="w-5 h-5" />
+              </button>
             </div>
           </motion.div>
         </motion.div>
@@ -1296,7 +1762,10 @@ export default function App() {
     bsrs: renderBsrs,
     bsrs_result: renderBsrsResult,
     counselor: renderCounselor,
-    feedback: renderFeedback,
+    survey: renderSurvey,
+    kids_welcome: renderKidsWelcome,
+    kids_quiz: renderKidsQuiz,
+    done: renderDone,
   };
 
   return (

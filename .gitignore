@@ -8,3 +8,6 @@ coverage/
 
 # 原始大尺寸圖檔（網站實際使用的是 public/assets 內壓縮後的 .webp）
 assets-source/
+
+# 工作人員帳號密碼（只留在本機，絕對不要上傳）
+private/
