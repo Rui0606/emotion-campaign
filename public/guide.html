@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>操作示範｜給情緒喘口氣 工作人員</title>
 <meta name="theme-color" content="#2a5bd7">
+<meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="./favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,8 +129,8 @@
 
   <p class="group">✳ 入口驗證　<span class="vi-in">· Lối vào</span></p>
   <div class="roles">
-    <button type="button" class="role" data-role="self"><span class="ic">📱</span><span><b>自己報到</b><span class="vi">Tự điểm danh</span><small>參加者用自己的手機報到，你負責確認畫面、發貼紙</small><small class="vi">Người tham gia tự điểm danh bằng điện thoại; bạn kiểm tra màn hình và phát nhãn dán</small></span></button>
-    <button type="button" class="role" data-role="proxy"><span class="ic">🙋</span><span><b>協助報到</b><span class="vi">Điểm danh hộ</span><small>沒有手機的人，你用工作人員系統幫他報到</small><small class="vi">Người không có điện thoại: bạn điểm danh hộ bằng hệ thống nhân viên</small></span></button>
+    <button type="button" class="role" data-role="self"><span class="ic">📱</span><span><b>自己報到</b><span class="vi">Tự điểm danh</span><small>參加者用自己的手機報到，你負責確認畫面、放行</small><small class="vi">Người tham gia tự điểm danh bằng điện thoại; bạn kiểm tra màn hình rồi cho đi tiếp</small></span></button>
+    <button type="button" class="role" data-role="proxy"><span class="ic">🙋</span><span><b>協助報到</b><span class="vi">Điểm danh hộ</span><small>沒有手機的人，你幫他報到，並把序號寫在小紙條給他</small><small class="vi">Người không có điện thoại: bạn điểm danh hộ và viết mã số lên giấy nhỏ đưa cho họ</small></span></button>
   </div>
   <p class="group">✳ 最後發放　<span class="vi-in">· Phát quà</span></p>
   <div class="roles">
@@ -238,13 +239,13 @@
   var ROLES = {
     self: {
       title: '入口驗證：自己報到', titleVi: 'Lối vào: Người tham gia tự điểm danh',
-      who: '參加者用自己的手機報到，你看畫面確認，再發貼紙、帶去下一關。', whoVi: 'Người tham gia tự điểm danh bằng điện thoại của mình. Bạn xem màn hình để xác nhận, rồi phát nhãn dán và hướng dẫn qua cửa tiếp theo.',
+      who: '參加者用自己的手機報到，你看畫面確認後放行。序號會用簡訊寄給他，不用另外寫紙條。', whoVi: 'Người tham gia tự điểm danh bằng điện thoại của mình. Bạn xem màn hình để xác nhận rồi cho đi tiếp. Mã số đã được gửi qua tin nhắn nên không cần viết giấy.',
       steps: [
         { s: 'lang', st: {}, act: [{ tap: 'zh' }], zh: '請參加者用手機掃海報上的 QR code，打開活動網頁，選語言。', vi: 'Mời người tham gia quét mã QR trên áp phích để mở trang web, rồi chọn ngôn ngữ.' },
         { s: 'reg', st: {}, act: [{ type: ['name', '王小明'] }, { tap: 'id-s' }, { tap: 'age-a' }, { type: ['phone', '0912345678'] }], zh: '參加者自己填姓名、選身分和年齡、輸入手機。小朋友可以用家長的手機。', vi: 'Người tham gia tự điền họ tên, chọn thân phận và độ tuổi, nhập số điện thoại. Trẻ em có thể dùng điện thoại của phụ huynh.' },
         { s: 'reg', st: { vals: { name: '王小明', phone: '0912345678' }, on: ['id-s', 'age-a'] }, act: [{ tap: 'submit' }], zh: '按「送出報到」。', vi: 'Bấm "送出報到" (Gửi điểm danh).' },
         { s: 'checked', st: {}, act: [], zh: '畫面出現「✓ 已報到」和序號，就是報到成功。請參加者把這個畫面給你看。', vi: 'Màn hình hiện "✓ 已報到" (Đã điểm danh) và mã số là thành công. Mời người tham gia cho bạn xem màn hình này.' },
-        { s: 'checked', st: {}, act: [{ real: '<div class="sticker"><b>驗證碼貼紙</b>序號 SEM012</div><div style="font-size:30px">🃏</div><div><b>發貼紙＋抽情緒小卡</b></div>' }], zh: '你確認有「✓ 已報到」和序號後，發驗證碼貼紙，並請參加者抽一張情緒小卡。', vi: 'Sau khi thấy "✓ 已報到" và mã số, bạn phát nhãn dán mã xác nhận và mời người tham gia rút một thẻ cảm xúc.' },
+        { s: 'checked', st: {}, act: [{ real: '<div style="font-size:34px">✅ 🃏</div><b>確認畫面 → 抽情緒小卡 → 放行</b><div class="hint">有手機的人會收到序號簡訊<br>不用寫小紙條</div>' }], zh: '你確認畫面有「✓ 已報到」和序號，就請參加者抽一張情緒小卡，然後放行。序號已經用簡訊寄給他，不用另外寫紙條。', vi: 'Khi thấy màn hình có "✓ 已報到" và mã số, mời người tham gia rút một thẻ cảm xúc rồi cho đi tiếp. Mã số đã được gửi qua tin nhắn, không cần viết giấy.' },
         { s: 'checked', st: {}, act: [{ tap: 'start' }, { real: '<div style="font-size:30px">➡️</div><b>12歲以上：關卡一 → 關卡二 → 問卷</b><b>未滿12歲：兒童版小測驗</b><div class="hint">系統會依年齡自動分流</div>' }], zh: '請參加者按「開始活動」，帶他到關卡一。系統會依年齡自動分流，未滿12歲會進兒童版。', vi: 'Mời người tham gia bấm "開始活動" (Bắt đầu) và dẫn đến cửa 1. Hệ thống tự chia theo độ tuổi; dưới 12 tuổi sẽ vào phiên bản trẻ em.' }
       ],
       faq: [
@@ -262,15 +263,17 @@
         { s: 'pickup', st: { staff: '昱誠' }, act: [{ tap: 'tab-reg' }], zh: '登入後點上方的「代為報到」。', vi: 'Sau khi đăng nhập, bấm "代為報到" (Điểm danh hộ) ở phía trên.' },
         { s: 'proxy', st: {}, act: [{ type: ['rname', '陳阿姨'] }, { tap: 'ri-g' }, { tap: 'ra-a' }], zh: '問參加者姓名，幫他選身分和年齡。', vi: 'Hỏi họ tên người tham gia, chọn thân phận và độ tuổi giúp họ.' },
         { s: 'proxy', st: { vals: { rname: '陳阿姨' }, on: ['ri-g', 'ra-a'] }, act: [{ tap: 'rsubmit' }], zh: '手機可以不填，有填才會收到簡訊。按「送出代為報到」。', vi: 'Số điện thoại có thể bỏ trống; có điền mới nhận được tin nhắn. Bấm "送出代為報到" (Gửi).' },
-        { s: 'proxy', st: { code: true }, act: [], zh: '畫面出現大大的序號。請清楚告訴參加者序號，也可以寫在驗證碼貼紙上交給他。', vi: 'Màn hình hiện mã số lớn. Hãy nói rõ mã số cho người tham gia, cũng có thể viết lên nhãn dán mã xác nhận và đưa cho họ.' },
+        { s: 'proxy', st: { code: true }, act: [], zh: '畫面出現大大的序號。', vi: 'Màn hình hiện mã số lớn.' },
+        { s: 'proxy', st: { code: true }, act: [{ real: '<div class="sticker"><b>序號</b><span style="font-size:22px;font-weight:800">SEM101</span></div><b>把序號寫在小紙條，交給參加者</b><div class="hint">請他保管好，最後領取時要用</div>' }], zh: '把序號寫在小紙條交給參加者，提醒他收好，最後領空氣鳳梨時要用。', vi: 'Viết mã số lên giấy nhỏ đưa cho người tham gia, nhắc họ giữ kỹ vì cuối cùng nhận cây cần dùng.' },
         { s: 'kiosk', st: {}, act: [{ type: ['code', '101'] }, { tap: 'go' }], zh: '帶參加者到共用平板（或家長手機），選「我已經有序號」，輸入序號數字 101，按繼續。', vi: 'Dẫn người tham gia đến máy tính bảng dùng chung (hoặc điện thoại phụ huynh), chọn "我已經有序號" (Tôi đã có mã số), nhập số 101 rồi bấm tiếp tục.' },
-        { s: 'kiosk', st: { vals: { code: '101' }, ok: true }, act: [], zh: '系統會依年齡自動進入活動。完成後一樣發貼紙、抽情緒小卡。', vi: 'Hệ thống tự vào hoạt động theo độ tuổi. Sau đó cũng phát nhãn dán và mời rút thẻ cảm xúc.' }
+        { s: 'kiosk', st: { vals: { code: '101' }, ok: true }, act: [], zh: '系統會依年齡自動進入活動。做完後在平板按「完成，換下一位」清除資料（閒置 2 分鐘也會自動清除）。', vi: 'Hệ thống tự vào hoạt động theo độ tuổi. Làm xong, bấm "完成，換下一位" (Xong, người tiếp theo) trên máy tính bảng để xóa dữ liệu (để yên 2 phút cũng tự xóa).' }
       ],
       faq: [
         { q: '忘記個人密碼？', a: '請找現場主控。每個人的密碼不一樣，不要借用別人的帳號，系統會記錄是誰經辦的。', qv: 'Quên mật khẩu cá nhân?', av: 'Hãy hỏi người điều phối. Mỗi người có mật khẩu riêng, đừng mượn tài khoản người khác vì hệ thống ghi lại ai đã thao tác.' },
         { q: '家長要幫兩個小孩報到？', a: '一次報一個人，送出後再報第二個。家長手機可以重複填，不會被擋。', qv: 'Phụ huynh muốn điểm danh cho hai con?', av: 'Mỗi lần điểm danh một người, gửi xong rồi làm người thứ hai. Số điện thoại phụ huynh có thể dùng lại, không bị chặn.' },
         { q: '出現「登入已失效」？', a: '重新輸入個人密碼登入就好，剛剛的資料不會不見。', qv: 'Hiện "Đăng nhập đã hết hạn"?', av: 'Chỉ cần nhập lại mật khẩu cá nhân để đăng nhập, dữ liệu vừa rồi không bị mất.' },
-        { q: '參加者忘記剛剛的序號？', a: '請他到發放區，發放的工作人員可以用姓名查到。', qv: 'Người tham gia quên mã số vừa nhận?', av: 'Mời họ đến khu phát quà, nhân viên ở đó có thể tra bằng họ tên.' }
+        { q: '參加者把小紙條弄丟了？', a: '沒關係，到發放區時工作人員可以用姓名查到。', qv: 'Người tham gia làm mất giấy ghi mã số?', av: 'Không sao, ở khu phát quà nhân viên có thể tra bằng họ tên.' },
+        { q: '平板上還留著前一位的畫面？', a: '按左上「回首頁」，再選「我已經有序號」輸入新的序號。', qv: 'Máy tính bảng vẫn còn màn hình của người trước?', av: 'Bấm "回首頁" (Trang chủ) ở góc trên bên trái, rồi chọn "我已經有序號" để nhập mã mới.' }
       ]
     },
     pickup: {
