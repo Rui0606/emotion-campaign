@@ -56,6 +56,7 @@ const SURVEY_OPTIONS = { gender: ['生理男性', '生理女性'], q1: ['警衛�
 // 依「115年特教宣導活動流程」整理。who 只要寫名字的一部分，會比對登入帳號的名稱（STAFF_ACCOUNTS 的代號）。
 // 改分工時只要改這裡，重新部署即可；時間格式 HH:mm。
 const EVENT_DATE = '2026-12-05';
+const GUIDE_URL = 'https://rui0606.github.io/emotion-campaign/guide.html'; // 操作示範動畫頁
 const SCHEDULE_ALL = [
   { start: '08:30', end: '09:00', title: '場佈（全體）', detail: '用推車把備品（植物、衛生紙、垃圾袋、簽到表）運到微風廣場；張貼海報、擺植物；簡易清潔地面桌面；確認分工；測試平板與系統' },
   { start: '09:00', end: '12:30', title: '活動進行', detail: '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：心情小卡＋空氣鳳梨' },
@@ -536,6 +537,7 @@ function getStaffPageHtml_() {
   .codebox { text-align: center; background: var(--blue-50); border: 2px solid var(--ink); border-radius: 16px; padding: 18px; margin-top: 16px; }
   .codebox .code { font-size: 40px; font-weight: 800; color: var(--blue); letter-spacing: 3px; }
   .hidden { display: none !important; }
+  .guide { display: block; text-align: center; margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--blue); text-decoration: none; border: 2px dashed var(--blue-100); border-radius: 12px; padding: 10px; background: var(--blue-50); }
   .logout { background: none; color: #8a97b3; font-size: 13px; min-height: 0; padding: 14px 0 0; width: 100%; font-weight: 400; border: none; box-shadow: none; }
   /* 小鈴鐺 */
   .bell { position: relative; min-height: 44px; padding: 6px 14px; font-size: 15px; background: #fff; flex-shrink: 0; }
@@ -572,6 +574,7 @@ function getStaffPageHtml_() {
       <input id="pinInput" class="center" type="password" inputmode="numeric" autocomplete="off" placeholder="個人密碼">
       <button class="primary" id="loginBtn">登入</button>
     </div>
+    <a class="guide" href="${GUIDE_URL}" target="_blank" rel="noopener">▶ 第一次用？看操作示範動畫</a>
   </div>
 
   <div id="mainView" class="hidden">
@@ -614,6 +617,7 @@ function getStaffPageHtml_() {
       <div id="regOut"></div>
     </div>
 
+    <a class="guide" href="${GUIDE_URL}" target="_blank" rel="noopener">▶ 操作示範動畫</a>
     <button class="logout" id="logoutBtn">登出</button>
   </div>
 </div>
