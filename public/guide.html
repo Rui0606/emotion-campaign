@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>操作示範｜給情緒喘口氣 工作人員</title>
+<meta name="theme-color" content="#2a5bd7">
+<link rel="icon" href="./favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@400;700&display=swap">
+<style>
+  :root { --ink:#1f3770; --blue:#2a5bd7; --blue-50:#eef4ff; --blue-100:#dbe7ff; --orange:#e5652a; --paper:#f5f8ff; --grid:#d6e2f7; --green:#2f9e5b; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Chiron GoRound TC','Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif; color: var(--ink); min-height: 100vh; padding: 18px 14px 60px;
+    background-color: var(--paper); background-image: linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size: 22px 22px; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  .ribbon { display:block; width:fit-content; margin:0 auto 8px; padding:5px 26px; background:#fff; color:var(--orange); font-weight:700; font-size:13px;
+    border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%,12px 50%); }
+  h1 { text-align:center; font-size:28px; color:var(--blue); -webkit-text-stroke:1px var(--ink); paint-order:stroke fill; text-shadow:2px 2px 0 #fff,3px 3px 0 var(--ink); letter-spacing:1px; }
+  .sub { text-align:center; font-size:14px; color:#5b6b8c; margin:8px 0 16px; line-height:1.6; }
+  .vi { display:none; color:#2a5bd7; font-size:.92em; }
+  body.show-vi .vi { display:block; }
+  .vi-in { display:none; color:#2a5bd7; }
+  body.show-vi .vi-in { display:inline; }
+  .lang { display:flex; justify-content:center; margin-bottom:16px; }
+  button { font-family:inherit; cursor:pointer; color:var(--ink); background:#fff; border:2px solid var(--ink); border-radius:14px; box-shadow:3px 3px 0 var(--ink); font-weight:700; transition:transform .1s,box-shadow .1s; }
+  button:active { transform:translate(3px,3px); box-shadow:0 0 0 var(--ink); }
+  .lang button { padding:8px 16px; font-size:14px; }
+  .lang button.on { background:var(--orange); color:#fff; }
+  .group { font-size:13px; font-weight:700; color:var(--orange); margin:6px 2px 8px; letter-spacing:1px; }
+  .roles { display:grid; gap:12px; margin-bottom:22px; }
+  .role { display:flex; align-items:center; gap:12px; text-align:left; padding:14px; width:100%; }
+  .role .ic { font-size:28px; width:46px; height:46px; display:flex; align-items:center; justify-content:center; background:var(--blue-50); border:2px solid var(--ink); border-radius:12px; flex-shrink:0; }
+  .role b { font-size:17px; display:block; }
+  .role small { font-size:13px; color:#5b6b8c; font-weight:400; display:block; margin-top:2px; line-height:1.4; }
+  .role.on { background:var(--blue); color:#fff; }
+  .role.on small, .role.on .vi { color:#dbe7ff; }
+  .role.on .ic { background:#fff; }
+  .panel { background:#fff; border:2px solid var(--ink); border-radius:22px; box-shadow:5px 5px 0 var(--ink); padding:18px 16px; }
+  .panel h2 { font-size:20px; margin-bottom:4px; }
+  .who { font-size:13px; color:#5b6b8c; margin-bottom:14px; line-height:1.5; }
+  /* 手機 */
+  .stage { display:flex; justify-content:center; margin:6px 0 14px; }
+  .phone { width:270px; height:520px; border:3px solid var(--ink); border-radius:34px; background:#fff; box-shadow:5px 5px 0 var(--ink); padding:10px; position:relative; }
+  .phone::before { content:''; position:absolute; top:8px; left:50%; transform:translateX(-50%); width:70px; height:8px; border-radius:6px; background:var(--ink); z-index:3; }
+  .screen { position:relative; width:100%; height:100%; border-radius:24px; overflow:hidden; font-size:12px;
+    background-color:var(--paper); background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:14px 14px; }
+  .sc { padding:24px 12px 12px; height:100%; display:flex; flex-direction:column; gap:7px; }
+  .sc.anim { animation:fade .35s ease; }
+  @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .bar { font-size:10px; font-weight:700; display:flex; justify-content:space-between; align-items:center; background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 8px; }
+  .bar .chip { background:var(--blue-50); color:var(--blue); border-radius:999px; padding:1px 7px; }
+  .card { background:#fff; border:2px solid var(--ink); border-radius:12px; box-shadow:2px 2px 0 var(--ink); padding:8px; }
+  .lbl { font-size:10px; font-weight:700; color:#5b6b8c; margin:2px 0 3px; }
+  .inp { border:2px solid var(--ink); border-radius:8px; background:#fff; min-height:26px; padding:4px 7px; font-size:12px; display:flex; align-items:center; }
+  .inp.ph { color:#9aa6bf; }
+  .inp .caret { display:inline-block; width:1px; height:13px; background:var(--ink); margin-left:1px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  .opts { display:flex; gap:4px; flex-wrap:wrap; }
+  .o { flex:1; text-align:center; border:2px solid var(--ink); border-radius:8px; background:#fff; padding:4px 2px; font-size:10px; font-weight:700; box-shadow:1px 1px 0 var(--ink); white-space:nowrap; }
+  .o.on { background:var(--blue-50); color:var(--blue); }
+  .o.on::before { content:'✳'; color:var(--orange); margin-right:2px; }
+  .btn { text-align:center; border:2px solid var(--ink); border-radius:10px; background:var(--blue); color:#fff; font-weight:700; padding:7px; font-size:12px; box-shadow:2px 2px 0 var(--ink); }
+  .btn.green { background:var(--green); }
+  .btn.gray { background:#cfd6e4; color:#6b7a99; }
+  .btn.white { background:#fff; color:var(--ink); }
+  .tabs { display:flex; gap:3px; background:var(--blue-50); border:2px solid var(--ink); border-radius:10px; padding:3px; }
+  .tabs div { flex:1; text-align:center; padding:4px; font-weight:700; font-size:11px; color:#5b6b8c; border-radius:7px; }
+  .tabs div.on { background:var(--blue); color:#fff; }
+  .title { text-align:center; font-weight:700; font-size:17px; color:var(--blue); -webkit-text-stroke:.6px var(--ink); paint-order:stroke fill; }
+  .big { font-size:30px; font-weight:800; color:var(--blue); letter-spacing:2px; text-align:center; }
+  .ok { text-align:center; font-size:20px; font-weight:800; color:var(--green); }
+  .kv { display:flex; justify-content:space-between; border-bottom:2px dashed var(--grid); padding:4px 0; font-size:11px; }
+  .kv:last-child { border:none; }
+  .kv span:first-child { color:#5b6b8c; font-weight:700; }
+  .kv span:last-child { font-weight:700; }
+  .tag { border-radius:999px; padding:0 6px; border:1.5px solid; font-size:10px; }
+  .tag.y { background:#ecfbf1; color:#1d7a45; border-color:#9fdcb8; }
+  .tag.n { background:#fff6e8; color:#a14a12; border-color:#f3c58f; }
+  .msg { border:2px solid; border-radius:9px; padding:6px 8px; font-size:11px; line-height:1.45; font-weight:700; }
+  .msg.s { background:#ecfbf1; color:#1d7a45; border-color:#9fdcb8; }
+  .msg.e { background:#fff1ee; color:#b42318; border-color:#f5b5a6; }
+  .msg.i { background:var(--blue-50); color:var(--ink); border-color:var(--blue-100); }
+  .hint { font-size:10px; color:#5b6b8c; text-align:center; line-height:1.4; }
+  .logo { width:62px; height:62px; margin:4px auto; border:2px solid var(--ink); border-radius:18px; background:#fff; box-shadow:2px 2px 0 var(--ink); display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .real { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgba(245,248,255,.94); padding:16px; text-align:center; animation:fade .35s ease; }
+  .sticker { width:150px; border:2px dashed var(--orange); border-radius:14px; background:#fff; padding:10px; transform:rotate(-4deg); box-shadow:3px 3px 0 var(--ink); }
+  .sticker b { color:var(--orange); display:block; font-size:13px; }
+  .gift { font-size:44px; }
+  /* 手指 */
+  .finger { position:absolute; width:34px; height:34px; z-index:5; pointer-events:none; transition:left .55s ease, top .55s ease, opacity .3s; opacity:0; font-size:28px; transform:translate(-6px,-4px); }
+  .finger.press { animation:press .3s ease; }
+  @keyframes press { 50% { transform:translate(-6px,-4px) scale(.8); } }
+  .ripple { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; border-radius:50%; border:3px solid var(--orange); z-index:4; pointer-events:none; animation:rip .5s ease-out forwards; }
+  @keyframes rip { from { transform:scale(.3); opacity:1; } to { transform:scale(1.6); opacity:0; } }
+  /* 說明與控制 */
+  .cap { background:#fff6e8; border:2px solid var(--ink); border-radius:14px; padding:10px 12px; min-height:74px; font-size:15px; line-height:1.55; font-weight:700; }
+  .cap .n { display:inline-block; background:var(--orange); color:#fff; border-radius:999px; padding:0 9px; margin-right:6px; font-size:13px; }
+  .cap .vi { font-weight:400; margin-top:4px; }
+  .ctrl { display:flex; gap:8px; margin:12px 0 8px; }
+  .ctrl button { flex:1; padding:9px 4px; font-size:14px; }
+  .ctrl .play { background:var(--blue); color:#fff; flex:1.4; }
+  .dots { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .dots span { width:10px; height:10px; border-radius:50%; border:2px solid var(--ink); background:#fff; cursor:pointer; }
+  .dots span.on { background:var(--orange); }
+  .dots span.done { background:var(--blue-100); }
+  h3 { font-size:15px; color:var(--orange); margin:20px 0 8px; letter-spacing:1px; }
+  ol.steps { padding-left:0; list-style:none; counter-reset:s; }
+  ol.steps li { counter-increment:s; position:relative; padding:8px 10px 8px 40px; border:2px solid var(--ink); border-radius:12px; background:#fff; margin-bottom:7px; font-size:14px; line-height:1.55; cursor:pointer; }
+  ol.steps li::before { content:counter(s); position:absolute; left:9px; top:8px; width:22px; height:22px; border-radius:50%; background:var(--blue); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  ol.steps li.on { background:#fff6e8; border-color:var(--orange); }
+  .faq { border:2px solid var(--ink); border-radius:12px; background:#fff; margin-bottom:7px; overflow:hidden; }
+  .faq summary { padding:10px 12px; font-weight:700; font-size:14px; cursor:pointer; list-style:none; }
+  .faq summary::before { content:'✳ '; color:var(--orange); }
+  .faq div.a { padding:0 12px 10px; font-size:14px; line-height:1.6; color:#2a3a5e; }
+  .foot { text-align:center; font-size:12px; color:#8a97b3; margin-top:22px; line-height:1.6; }
+  @media (prefers-reduced-motion: reduce) { .sc.anim, .real { animation:none; } .finger { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="ribbon">✳ 115年修平特殊教育宣導</span>
+  <h1>工作人員操作示範</h1>
+  <p class="sub">選你負責的工作，看手機畫面示範怎麼操作<span class="vi">Chọn công việc của bạn để xem hướng dẫn thao tác trên điện thoại</span></p>
+
+  <div class="lang"><button type="button" id="viBtn" aria-pressed="false">🇻🇳 顯示越南文 Tiếng Việt</button></div>
+
+  <p class="group">✳ 入口驗證　<span class="vi-in">· Lối vào</span></p>
+  <div class="roles">
+    <button type="button" class="role" data-role="self"><span class="ic">📱</span><span><b>自己報到</b><span class="vi">Tự điểm danh</span><small>參加者用自己的手機報到，你負責確認畫面、發貼紙</small><small class="vi">Người tham gia tự điểm danh bằng điện thoại; bạn kiểm tra màn hình và phát nhãn dán</small></span></button>
+    <button type="button" class="role" data-role="proxy"><span class="ic">🙋</span><span><b>協助報到</b><span class="vi">Điểm danh hộ</span><small>沒有手機的人，你用工作人員系統幫他報到</small><small class="vi">Người không có điện thoại: bạn điểm danh hộ bằng hệ thống nhân viên</small></span></button>
+  </div>
+  <p class="group">✳ 最後發放　<span class="vi-in">· Phát quà</span></p>
+  <div class="roles">
+    <button type="button" class="role" data-role="pickup"><span class="ic">🌱</span><span><b>發放空氣鳳梨</b><span class="vi">Phát cây không khí</span><small>查序號、核對姓名、確認領取</small><small class="vi">Tra mã số, đối chiếu họ tên, xác nhận nhận quà</small></span></button>
+  </div>
+
+  <div class="panel" id="panel">
+    <h2 id="pTitle"></h2>
+    <p class="who" id="pWho"></p>
+    <div class="stage"><div class="phone"><div class="screen" id="screen"><div class="finger" id="finger">👆</div></div></div></div>
+    <div class="cap" id="cap"></div>
+    <div class="ctrl">
+      <button type="button" id="prevBtn">◀ 上一步</button>
+      <button type="button" class="play" id="playBtn">⏸ 暫停</button>
+      <button type="button" id="nextBtn">下一步 ▶</button>
+    </div>
+    <div class="dots" id="dots"></div>
+    <h3>✳ 步驟清單（點一下可跳到該步驟）<span class="vi">Các bước (bấm để chuyển đến bước đó)</span></h3>
+    <ol class="steps" id="stepList"></ol>
+    <h3>✳ 常見狀況 <span class="vi-in">· Tình huống thường gặp</span></h3>
+    <div id="faq"></div>
+  </div>
+  <p class="foot">示範畫面為簡化版，實際畫面以活動當天系統為準。<br>有問題請找現場主控。<span class="vi">Màn hình minh họa đã được đơn giản hóa. Có vấn đề xin hỏi người điều phối tại chỗ.</span></p>
+</div>
+
+<script>
+(function () {
+  // ---------- 畫面 ----------
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function inp(k, st, ph) {
+    var v = (st.vals || {})[k];
+    var typing = st.typing === k;
+    if (!v && !typing) return '<div class="inp ph" data-k="' + k + '">' + esc(ph) + '</div>';
+    return '<div class="inp" data-k="' + k + '">' + esc(v || '') + (typing ? '<span class="caret"></span>' : '') + '</div>';
+  }
+  function opt(k, label, st) { return '<div class="o' + ((st.on || []).indexOf(k) !== -1 ? ' on' : '') + '" data-k="' + k + '">' + label + '</div>'; }
+  var S = {
+    lang: function () {
+      return '<div class="sc"><div class="logo">🌱</div><div class="title">給情緒喘口氣</div><div class="hint">請選擇語言</div>' +
+        '<div class="btn white" data-k="zh">繁體中文</div><div class="btn white">English</div><div class="btn white">Tiếng Việt</div></div>';
+    },
+    reg: function (st) {
+      return '<div class="sc"><div class="bar">回首頁<span class="chip">✳ 報到</span></div><div class="card">' +
+        '<div class="tabs"><div class="on">我要報到</div><div>我已經有序號</div></div>' +
+        '<div class="lbl">姓名</div>' + inp('name', st, '請輸入姓名') +
+        '<div class="lbl">身分</div><div class="opts">' + opt('id-t', '職員/老師', st) + opt('id-s', '學生', st) + opt('id-g', '來賓', st) + '</div>' +
+        '<div class="lbl">年齡</div><div class="opts">' + opt('age-a', '12歲以上', st) + opt('age-c', '未滿12歲', st) + '</div>' +
+        '<div class="lbl">手機</div>' + inp('phone', st, '09xxxxxxxx') +
+        '</div><div class="btn" data-k="submit">送出報到</div></div>';
+    },
+    checked: function (st) {
+      return '<div class="sc"><div class="bar">回首頁<span class="chip">✳ 報到</span></div><div class="card" style="text-align:center">' +
+        '<div class="ok">✓ 已報到</div><div class="hint">你的序號</div><div class="big">' + (st.code || 'SEM012') + '</div>' +
+        '<div class="hint">請把這個畫面給入口工作人員看<br>（簡訊也會收到序號）</div></div>' +
+        '<div class="btn" data-k="start">開始活動 →</div></div>';
+    },
+    login: function (st) {
+      return '<div class="sc"><div class="title" style="margin-top:20px">工作人員系統</div><div class="hint">「給情緒喘口氣」活動現場用</div>' +
+        '<div class="card"><div class="lbl">個人密碼</div>' + inp('pin', st, '個人密碼') + '</div><div class="btn" data-k="login">登入</div></div>';
+    },
+    pickup: function (st) {
+      var h = '<div class="sc"><div class="bar">👋 ' + (st.staff || '瑞芸') + '<span class="chip">🔔 提醒</span></div>' +
+        '<div class="tabs"><div class="on">領取查詢</div><div data-k="tab-reg">代為報到</div></div>' +
+        '<div class="opts">' + opt('m-code', '用序號查', { on: [st.byName ? '' : 'm-code'] }) + opt('m-name', '忘記序號？用姓名查', { on: [st.byName ? 'm-name' : ''] }) + '</div>' +
+        '<div style="display:flex;gap:5px"><div style="flex:1">' + inp('q', st, st.byName ? '參加者姓名' : '序號，例：1 或 001') + '</div><div class="btn" data-k="search" style="padding:5px 10px">搜尋</div></div>';
+      if (st.list) h += '<div class="msg i">找到 2 筆，請核對身分與年齡後選擇：</div><div class="card" data-k="pick1" style="padding:6px"><b>王小明（學生・12歲以上）</b><div class="hint" style="text-align:left">SEM012・已完成</div></div><div class="card" style="padding:6px"><b>王小明（來賓・12歲以上）</b><div class="hint" style="text-align:left">SEM087・未完成</div></div>';
+      if (st.card) {
+        var done = st.card !== 'notdone', picked = st.card === 'picked';
+        h += '<div class="card"><div class="kv"><span>序號</span><span style="color:#2a5bd7">SEM012</span></div><div class="kv"><span>姓名</span><span>王小明</span></div>' +
+          '<div class="kv"><span>身分／年齡</span><span>學生・12歲以上</span></div>' +
+          '<div class="kv"><span>活動完成</span><span class="tag ' + (done ? 'y">✓ 已完成' : 'n">未完成') + '</span></div>' +
+          '<div class="kv"><span>領取狀態</span><span class="tag ' + (picked ? 'y">✓ 已領取 10:30 瑞芸' : 'n">未領取') + '</span></div></div>';
+        if (picked) h += '<div class="msg e">此人已領取，無法重複領取</div>';
+        else {
+          if (!done) h += '<div class="msg e">尚未完成活動，請參加者完成後再來領取</div>';
+          h += '<div class="msg i">請參加者說出姓名，與上方姓名核對一致再確認</div>' +
+            '<div style="display:flex;gap:5px"><div class="btn ' + (done ? 'green' : 'gray') + '" data-k="confirm" style="flex:2">✓ 確認領取</div><div class="btn white" style="flex:1">重新搜尋</div></div>';
+        }
+      }
+      if (st.success) h += '<div class="msg s">✓ SEM012 王小明 領取成功（10:31）</div>';
+      return h + '</div>';
+    },
+    proxy: function (st) {
+      var h = '<div class="sc"><div class="bar">👋 ' + (st.staff || '昱誠') + '<span class="chip">🔔 提醒</span></div>' +
+        '<div class="tabs"><div>領取查詢</div><div class="on">代為報到</div></div>';
+      if (st.code) {
+        return h + '<div class="card" style="text-align:center;background:#eef4ff"><div class="hint">陳阿姨・12歲以上</div><div class="big">SEM101</div>' +
+          '<div class="hint">請告訴參加者序號，在平板或家長手機選「我已經有序號」輸入</div></div></div>';
+      }
+      return h + '<div class="card"><div class="lbl">姓名</div>' + inp('rname', st, '') +
+        '<div class="lbl">身分</div><div class="opts">' + opt('ri-t', '職員/老師', st) + opt('ri-s', '學生', st) + opt('ri-g', '來賓', st) + '</div>' +
+        '<div class="lbl">年齡</div><div class="opts">' + opt('ra-a', '12歲以上', st) + opt('ra-c', '未滿12歲', st) + '</div>' +
+        '<div class="lbl">手機（選填，有填才會發簡訊）</div>' + inp('rphone', st, '09xxxxxxxx') +
+        '</div><div class="btn" data-k="rsubmit">送出代為報到</div></div>';
+    },
+    kiosk: function (st) {
+      return '<div class="sc"><div class="bar">共用平板<span class="chip">✳ 報到</span></div><div class="card">' +
+        '<div class="tabs"><div>我要報到</div><div class="on">我已經有序號</div></div>' +
+        '<div class="lbl">序號</div>' + inp('code', st, '例：101') + '<div class="hint">工作人員代為報到後告訴你的序號</div></div>' +
+        '<div class="btn" data-k="go">繼續 →</div>' + (st.ok ? '<div class="msg s">✓ 陳阿姨，歡迎！依年齡自動進入活動</div>' : '') + '</div>';
+    }
+  };
+
+  // ---------- 劇本 ----------
+  // 每一步：screen、state、actions（tap / type / real 實體動作圖）、zh、vi
+  var ROLES = {
+    self: {
+      title: '入口驗證：自己報到', titleVi: 'Lối vào: Người tham gia tự điểm danh',
+      who: '參加者用自己的手機報到，你看畫面確認，再發貼紙、帶去下一關。', whoVi: 'Người tham gia tự điểm danh bằng điện thoại của mình. Bạn xem màn hình để xác nhận, rồi phát nhãn dán và hướng dẫn qua cửa tiếp theo.',
+      steps: [
+        { s: 'lang', st: {}, act: [{ tap: 'zh' }], zh: '請參加者用手機掃海報上的 QR code，打開活動網頁，選語言。', vi: 'Mời người tham gia quét mã QR trên áp phích để mở trang web, rồi chọn ngôn ngữ.' },
+        { s: 'reg', st: {}, act: [{ type: ['name', '王小明'] }, { tap: 'id-s' }, { tap: 'age-a' }, { type: ['phone', '0912345678'] }], zh: '參加者自己填姓名、選身分和年齡、輸入手機。小朋友可以用家長的手機。', vi: 'Người tham gia tự điền họ tên, chọn thân phận và độ tuổi, nhập số điện thoại. Trẻ em có thể dùng điện thoại của phụ huynh.' },
+        { s: 'reg', st: { vals: { name: '王小明', phone: '0912345678' }, on: ['id-s', 'age-a'] }, act: [{ tap: 'submit' }], zh: '按「送出報到」。', vi: 'Bấm "送出報到" (Gửi điểm danh).' },
+        { s: 'checked', st: {}, act: [], zh: '畫面出現「✓ 已報到」和序號，就是報到成功。請參加者把這個畫面給你看。', vi: 'Màn hình hiện "✓ 已報到" (Đã điểm danh) và mã số là thành công. Mời người tham gia cho bạn xem màn hình này.' },
+        { s: 'checked', st: {}, act: [{ real: '<div class="sticker"><b>驗證碼貼紙</b>序號 SEM012</div><div style="font-size:30px">🃏</div><div><b>發貼紙＋抽情緒小卡</b></div>' }], zh: '你確認有「✓ 已報到」和序號後，發驗證碼貼紙，並請參加者抽一張情緒小卡。', vi: 'Sau khi thấy "✓ 已報到" và mã số, bạn phát nhãn dán mã xác nhận và mời người tham gia rút một thẻ cảm xúc.' },
+        { s: 'checked', st: {}, act: [{ tap: 'start' }, { real: '<div style="font-size:30px">➡️</div><b>12歲以上：關卡一 → 關卡二 → 問卷</b><b>未滿12歲：兒童版小測驗</b><div class="hint">系統會依年齡自動分流</div>' }], zh: '請參加者按「開始活動」，帶他到關卡一。系統會依年齡自動分流，未滿12歲會進兒童版。', vi: 'Mời người tham gia bấm "開始活動" (Bắt đầu) và dẫn đến cửa 1. Hệ thống tự chia theo độ tuổi; dưới 12 tuổi sẽ vào phiên bản trẻ em.' }
+      ],
+      faq: [
+        { q: '參加者說沒收到簡訊？', a: '沒關係，以手機畫面上的序號為準。簡訊只是備份，晚一點才收到也正常。', qv: 'Người tham gia nói chưa nhận được tin nhắn?', av: 'Không sao, lấy mã số trên màn hình làm chuẩn. Tin nhắn chỉ là bản sao lưu, đến muộn cũng bình thường.' },
+        { q: '出現「這支手機已經報到過了」？', a: '同一支手機只能報到一個人。如果是本人，請他填和第一次相同的姓名，就會拿回原本的序號。如果是別人（例如兄弟姊妹共用手機），請改用「協助報到」。', qv: 'Hiện thông báo "Điện thoại này đã điểm danh rồi"?', av: 'Mỗi điện thoại chỉ điểm danh cho một người. Nếu là chính người đó, mời điền đúng họ tên như lần đầu để lấy lại mã số cũ. Nếu là người khác (ví dụ anh chị em dùng chung điện thoại), hãy dùng "Điểm danh hộ".' },
+        { q: '參加者沒有手機或不會操作？', a: '請他到「協助報到」的工作人員那裡，由工作人員代為報到。', qv: 'Người tham gia không có điện thoại hoặc không biết thao tác?', av: 'Mời họ đến nhân viên "Điểm danh hộ" để được điểm danh giúp.' },
+        { q: '網頁一直轉圈圈、送不出去？', a: '先請參加者等 10 秒再按一次。很多人都送不出去時，可能是網路問題，請立刻通知現場主控。', qv: 'Trang web cứ xoay vòng, không gửi được?', av: 'Mời đợi 10 giây rồi bấm lại. Nếu nhiều người cùng không gửi được, có thể do mạng, hãy báo ngay cho người điều phối.' }
+      ]
+    },
+    proxy: {
+      title: '入口驗證：協助報到', titleVi: 'Lối vào: Điểm danh hộ',
+      who: '沒有手機、或不方便自己操作的人（長輩、小朋友），由你用工作人員系統幫他報到。', whoVi: 'Người không có điện thoại hoặc khó tự thao tác (người lớn tuổi, trẻ em): bạn điểm danh hộ bằng hệ thống nhân viên.',
+      steps: [
+        { s: 'login', st: {}, act: [{ type: ['pin', '••••'] }, { tap: 'login' }], zh: '用你的手機打開「工作人員系統」網址，輸入你的個人密碼，按登入。', vi: 'Mở đường dẫn "Hệ thống nhân viên" trên điện thoại của bạn, nhập mật khẩu cá nhân rồi bấm đăng nhập.' },
+        { s: 'pickup', st: { staff: '昱誠' }, act: [{ tap: 'tab-reg' }], zh: '登入後點上方的「代為報到」。', vi: 'Sau khi đăng nhập, bấm "代為報到" (Điểm danh hộ) ở phía trên.' },
+        { s: 'proxy', st: {}, act: [{ type: ['rname', '陳阿姨'] }, { tap: 'ri-g' }, { tap: 'ra-a' }], zh: '問參加者姓名，幫他選身分和年齡。', vi: 'Hỏi họ tên người tham gia, chọn thân phận và độ tuổi giúp họ.' },
+        { s: 'proxy', st: { vals: { rname: '陳阿姨' }, on: ['ri-g', 'ra-a'] }, act: [{ tap: 'rsubmit' }], zh: '手機可以不填，有填才會收到簡訊。按「送出代為報到」。', vi: 'Số điện thoại có thể bỏ trống; có điền mới nhận được tin nhắn. Bấm "送出代為報到" (Gửi).' },
+        { s: 'proxy', st: { code: true }, act: [], zh: '畫面出現大大的序號。請清楚告訴參加者序號，也可以寫在驗證碼貼紙上交給他。', vi: 'Màn hình hiện mã số lớn. Hãy nói rõ mã số cho người tham gia, cũng có thể viết lên nhãn dán mã xác nhận và đưa cho họ.' },
+        { s: 'kiosk', st: {}, act: [{ type: ['code', '101'] }, { tap: 'go' }], zh: '帶參加者到共用平板（或家長手機），選「我已經有序號」，輸入序號數字 101，按繼續。', vi: 'Dẫn người tham gia đến máy tính bảng dùng chung (hoặc điện thoại phụ huynh), chọn "我已經有序號" (Tôi đã có mã số), nhập số 101 rồi bấm tiếp tục.' },
+        { s: 'kiosk', st: { vals: { code: '101' }, ok: true }, act: [], zh: '系統會依年齡自動進入活動。完成後一樣發貼紙、抽情緒小卡。', vi: 'Hệ thống tự vào hoạt động theo độ tuổi. Sau đó cũng phát nhãn dán và mời rút thẻ cảm xúc.' }
+      ],
+      faq: [
+        { q: '忘記個人密碼？', a: '請找現場主控。每個人的密碼不一樣，不要借用別人的帳號，系統會記錄是誰經辦的。', qv: 'Quên mật khẩu cá nhân?', av: 'Hãy hỏi người điều phối. Mỗi người có mật khẩu riêng, đừng mượn tài khoản người khác vì hệ thống ghi lại ai đã thao tác.' },
+        { q: '家長要幫兩個小孩報到？', a: '一次報一個人，送出後再報第二個。家長手機可以重複填，不會被擋。', qv: 'Phụ huynh muốn điểm danh cho hai con?', av: 'Mỗi lần điểm danh một người, gửi xong rồi làm người thứ hai. Số điện thoại phụ huynh có thể dùng lại, không bị chặn.' },
+        { q: '出現「登入已失效」？', a: '重新輸入個人密碼登入就好，剛剛的資料不會不見。', qv: 'Hiện "Đăng nhập đã hết hạn"?', av: 'Chỉ cần nhập lại mật khẩu cá nhân để đăng nhập, dữ liệu vừa rồi không bị mất.' },
+        { q: '參加者忘記剛剛的序號？', a: '請他到發放區，發放的工作人員可以用姓名查到。', qv: 'Người tham gia quên mã số vừa nhận?', av: 'Mời họ đến khu phát quà, nhân viên ở đó có thể tra bằng họ tên.' }
+      ]
+    },
+    pickup: {
+      title: '最後發放：空氣鳳梨', titleVi: 'Phát quà: cây không khí',
+      who: '參加者完成活動後來領空氣鳳梨。你查序號、核對姓名、按確認領取。系統會擋住沒完成和重複領取的人。', whoVi: 'Người tham gia hoàn thành hoạt động rồi đến nhận cây. Bạn tra mã số, đối chiếu họ tên và bấm xác nhận. Hệ thống tự chặn người chưa hoàn thành hoặc nhận lại lần hai.',
+      steps: [
+        { s: 'login', st: {}, act: [{ type: ['pin', '••••'] }, { tap: 'login' }], zh: '打開「工作人員系統」，輸入你的個人密碼登入。', vi: 'Mở "Hệ thống nhân viên" và đăng nhập bằng mật khẩu cá nhân.' },
+        { s: 'pickup', st: {}, act: [{ type: ['q', '12'] }, { tap: 'search' }], zh: '問參加者序號，只要輸入數字：1、001、SEM001 都可以。輸入 12 再按搜尋。', vi: 'Hỏi mã số của người tham gia, chỉ cần nhập số: 1, 001 hay SEM001 đều được. Nhập 12 rồi bấm tìm.' },
+        { s: 'pickup', st: { vals: { q: '12' }, card: 'ok' }, act: [], zh: '請參加者說出姓名，和畫面上的姓名核對。「活動完成」要是 ✓ 已完成。', vi: 'Mời người tham gia nói họ tên và đối chiếu với tên trên màn hình. Mục "活動完成" (Hoàn thành) phải là ✓ 已完成.' },
+        { s: 'pickup', st: { vals: { q: '12' }, card: 'ok' }, act: [{ tap: 'confirm' }], zh: '核對沒問題，按綠色的「✓ 確認領取」。', vi: 'Đối chiếu xong, bấm nút xanh "✓ 確認領取" (Xác nhận nhận quà).' },
+        { s: 'pickup', st: { vals: { q: '' }, success: true }, act: [{ real: '<div class="gift">🌱</div><b>發空氣鳳梨＋說明照顧方式</b><div class="hint">每週泡水或噴水、放通風明亮處</div>' }], zh: '出現「領取成功」後，發空氣鳳梨，簡單說明照顧方式。畫面 2 秒後會自動清空，可以查下一位。', vi: 'Khi hiện "領取成功" (Nhận thành công), phát cây và hướng dẫn ngắn cách chăm sóc. Màn hình tự xóa sau 2 giây để tra người tiếp theo.' },
+        { s: 'pickup', st: { vals: { q: '12' }, card: 'picked' }, act: [], zh: '如果出現紅字「此人已領取」，代表已經領過了，不能再發。', vi: 'Nếu hiện chữ đỏ "此人已領取" (Người này đã nhận), nghĩa là đã nhận rồi, không phát thêm.' },
+        { s: 'pickup', st: { vals: { q: '12' }, card: 'notdone' }, act: [], zh: '如果是「未完成」，確認按鈕是灰色的，請參加者回去把活動做完再來。', vi: 'Nếu là "未完成" (Chưa hoàn thành), nút xác nhận màu xám. Mời người tham gia quay lại hoàn thành hoạt động rồi đến nhận.' },
+        { s: 'pickup', st: { byName: true }, act: [{ tap: 'm-name' }, { type: ['q', '王小明'] }, { tap: 'search' }], zh: '參加者忘記序號？點「忘記序號？用姓名查」，輸入姓名或其中幾個字。', vi: 'Người tham gia quên mã số? Bấm "忘記序號？用姓名查" (Tra bằng họ tên) rồi nhập họ tên hoặc vài chữ trong tên.' },
+        { s: 'pickup', st: { byName: true, vals: { q: '王小明' }, list: true }, act: [{ tap: 'pick1' }], zh: '同名的人會列出好幾筆，核對身分和年齡後點選正確的那一位，再照前面的步驟確認。', vi: 'Nếu trùng tên sẽ hiện nhiều dòng; đối chiếu thân phận và độ tuổi rồi chọn đúng người, sau đó xác nhận như các bước trên.' }
+      ],
+      faq: [
+        { q: '參加者說「我做完了」，但畫面顯示未完成？', a: '可能是最後一頁沒有按到送出。請他打開手機看畫面停在哪裡，把最後一步完成。12歲以上要填完問卷，未滿12歲要做完小測驗。', qv: 'Người tham gia nói "đã làm xong" nhưng màn hình hiện chưa hoàn thành?', av: 'Có thể chưa bấm gửi ở trang cuối. Mời họ mở điện thoại xem đang dừng ở đâu và làm nốt bước cuối. Từ 12 tuổi phải điền xong phiếu khảo sát; dưới 12 tuổi phải làm xong câu đố.' },
+        { q: '兩台手機同時查到同一個人？', a: '只有先按確認的那台會成功，另一台會顯示已領取，不會重複發。', qv: 'Hai điện thoại cùng tra một người?', av: 'Chỉ máy bấm xác nhận trước mới thành công, máy kia sẽ hiện đã nhận, không bị phát trùng.' },
+        { q: '空氣鳳梨發完了？', a: '立刻通知現場主控，由主控決定怎麼處理。', qv: 'Hết cây không khí?', av: 'Báo ngay cho người điều phối để quyết định cách xử lý.' },
+        { q: '查不到序號？', a: '先確認數字有沒有打錯。還是查不到，就改用姓名查。', qv: 'Không tra được mã số?', av: 'Kiểm tra lại số đã nhập. Nếu vẫn không được, hãy tra bằng họ tên.' }
+      ]
+    }
+  };
+
+  // ---------- 播放 ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var screen = $('screen'), finger = $('finger');
+  var role = null, idx = 0, playing = true, runId = 0, timer = null;
+  var showVi = false;
+
+  function wait(ms, id) { return new Promise(function (res, rej) { timer = setTimeout(function () { id === runId ? res() : rej('stop'); }, ms); }); }
+  function render(stepDef, st, first) {
+    screen.querySelectorAll('.sc, .real').forEach(function (n) { n.remove(); });
+    screen.insertAdjacentHTML('afterbegin', S[stepDef.s](st));
+    if (first) screen.querySelector('.sc').classList.add('anim');
+  }
+  function moveFinger(k) {
+    var t = screen.querySelector('[data-k="' + k + '"]');
+    if (!t) return null;
+    var r = t.getBoundingClientRect(), b = screen.getBoundingClientRect();
+    var x = r.left - b.left + Math.min(r.width / 2, 60), y = r.top - b.top + r.height / 2;
+    finger.style.opacity = 1; finger.style.left = x + 'px'; finger.style.top = y + 'px';
+    return { x: x, y: y };
+  }
+  function ripple(p) {
+    var d = document.createElement('div'); d.className = 'ripple'; d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
+    screen.appendChild(d); setTimeout(function () { d.remove(); }, 600);
+    finger.classList.remove('press'); void finger.offsetWidth; finger.classList.add('press');
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  async function runStep(i, id) {
+    var def = role.steps[i];
+    var st = clone(def.st); st.vals = st.vals || {}; st.on = st.on || [];
+    render(def, st, true);
+    finger.style.opacity = 0;
+    await wait(700, id);
+    for (var a = 0; a < def.act.length; a++) {
+      var act = def.act[a];
+      if (act.tap) {
+        var p = moveFinger(act.tap); await wait(650, id);
+        if (p) ripple(p);
+        if (/^(id-|age-|ri-|ra-)/.test(act.tap)) {
+          var grp = act.tap.split('-')[0];
+          st.on = st.on.filter(function (k) { return k.split('-')[0] !== grp; });
+          st.on.push(act.tap); render(def, st); moveFinger(act.tap);
+        }
+        if (act.tap === 'm-name') { st.byName = true; render(def, st); moveFinger(act.tap); }
+        await wait(500, id);
+      } else if (act.type) {
+        var k = act.type[0], txt = act.type[1];
+        moveFinger(k); await wait(600, id);
+        var pp = moveFinger(k); if (pp) ripple(pp);
+        st.typing = k; st.vals[k] = '';
+        var chars = Array.from(txt);
+        for (var c = 0; c < chars.length; c++) { st.vals[k] += chars[c]; render(def, st); moveFinger(k); await wait(chars.length > 6 ? 110 : 220, id); }
+        st.typing = null; render(def, st); moveFinger(k);
+        await wait(350, id);
+      } else if (act.real) {
+        finger.style.opacity = 0;
+        await wait(300, id);
+        screen.insertAdjacentHTML('beforeend', '<div class="real">' + act.real + '</div>');
+        await wait(1400, id);
+      }
+    }
+    await wait(2600 + Math.min(def.zh.length * 35, 2200), id);
+  }
+
+  function showCaption() {
+    var def = role.steps[idx];
+    $('cap').innerHTML = '<span class="n">' + (idx + 1) + ' / ' + role.steps.length + '</span>' + esc(def.zh) + '<div class="vi">' + esc(def.vi) + '</div>';
+    Array.prototype.forEach.call($('dots').children, function (d, i) { d.className = i === idx ? 'on' : i < idx ? 'done' : ''; });
+    Array.prototype.forEach.call($('stepList').children, function (li, i) { li.classList.toggle('on', i === idx); });
+  }
+
+  async function play(from) {
+    var id = ++runId; clearTimeout(timer);
+    idx = from;
+    try {
+      while (true) {
+        showCaption();
+        if (!playing) { await renderStatic(id); return; }
+        await runStep(idx, id);
+        if (idx < role.steps.length - 1) idx++; else { idx = 0; await wait(800, id); }
+      }
+    } catch (e) { /* 被新的播放打斷 */ }
+  }
+  // 暫停時直接顯示該步驟完成後的畫面
+  async function renderStatic() {
+    var def = role.steps[idx];
+    var st = clone(def.st); st.vals = st.vals || {}; st.on = st.on || [];
+    def.act.forEach(function (a) {
+      if (a.type) st.vals[a.type[0]] = a.type[1];
+      if (a.tap && /^(id-|age-|ri-|ra-)/.test(a.tap)) st.on.push(a.tap);
+      if (a.tap === 'm-name') st.byName = true;
+    });
+    render(def, st, true);
+    finger.style.opacity = 0;
+    var last = def.act[def.act.length - 1];
+    if (last && last.real) screen.insertAdjacentHTML('beforeend', '<div class="real">' + last.real + '</div>');
+  }
+
+  function setPlaying(p) { playing = p; $('playBtn').textContent = p ? '⏸ 暫停' : '▶ 播放'; }
+
+  function choose(r) {
+    role = ROLES[r];
+    document.querySelectorAll('.role').forEach(function (b) { b.classList.toggle('on', b.dataset.role === r); });
+    $('pTitle').innerHTML = esc(role.title) + '<span class="vi" style="font-size:15px">' + esc(role.titleVi) + '</span>';
+    $('pWho').innerHTML = esc(role.who) + '<span class="vi">' + esc(role.whoVi) + '</span>';
+    $('dots').innerHTML = role.steps.map(function () { return '<span></span>'; }).join('');
+    Array.prototype.forEach.call($('dots').children, function (d, i) { d.onclick = function () { go(i); }; });
+    $('stepList').innerHTML = role.steps.map(function (s) { return '<li>' + esc(s.zh) + '<span class="vi">' + esc(s.vi) + '</span></li>'; }).join('');
+    Array.prototype.forEach.call($('stepList').children, function (li, i) { li.onclick = function () { go(i); window.scrollTo({ top: $('panel').offsetTop - 10, behavior: 'smooth' }); }; });
+    $('faq').innerHTML = role.faq.map(function (f) {
+      return '<details class="faq"><summary>' + esc(f.q) + '<span class="vi">' + esc(f.qv) + '</span></summary><div class="a">' + esc(f.a) + '<span class="vi">' + esc(f.av) + '</span></div></details>';
+    }).join('');
+    try { history.replaceState(null, '', '#' + r); } catch (e) {}
+    setPlaying(true);
+    play(0);
+  }
+  function go(i) { play(Math.max(0, Math.min(role.steps.length - 1, i))); }
+
+  document.querySelectorAll('.role').forEach(function (b) { b.onclick = function () { choose(b.dataset.role); $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
+  $('prevBtn').onclick = function () { go(idx - 1); };
+  $('nextBtn').onclick = function () { go(idx + 1); };
+  $('playBtn').onclick = function () { setPlaying(!playing); play(idx); };
+  $('viBtn').onclick = function () {
+    showVi = !showVi;
+    document.body.classList.toggle('show-vi', showVi);
+    this.classList.toggle('on', showVi);
+    this.setAttribute('aria-pressed', showVi);
+    this.textContent = showVi ? '🇻🇳 越南文：開 Tiếng Việt: Bật' : '🇻🇳 顯示越南文 Tiếng Việt';
+  };
+  if (/[?&]vi=1/.test(location.search)) $('viBtn').click();
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) setPlaying(false);
+  var start = (location.hash || '').slice(1);
+  choose(ROLES[start] ? start : 'self');
+  window.scrollTo(0, 0);
+})();
+</script>
+</body>
+</html>
