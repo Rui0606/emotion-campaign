@@ -52,6 +52,46 @@ const SURVEY_HEADERS = ['送出時間', '身分', '性別', '1.協助特教學�
   '2.更認識情緒行為障礙(1-5)', '3.會尊重並理解身障同學(1-5)', '4.建議或鼓勵'];
 const SURVEY_OPTIONS = { gender: ['生理男性', '生理女性'], q1: ['警衛室', '學發中心資源教室'] };
 
+// ============ 活動當天時程與分工（小鈴鐺提醒）============
+// 依「115年特教宣導活動流程」整理。who 只要寫名字的一部分，會比對登入帳號的名稱（STAFF_ACCOUNTS 的代號）。
+// 改分工時只要改這裡，重新部署即可；時間格式 HH:mm。
+const EVENT_DATE = '2026-12-05';
+const GUIDE_URL = 'https://rui0606.github.io/emotion-campaign/guide.html'; // 操作示範動畫頁
+const SCHEDULE_ALL = [
+  { start: '08:30', end: '09:00', title: '場佈（全體）', detail: '用推車把備品（植物、衛生紙、垃圾袋、簽到表）運到微風廣場；張貼海報、擺植物；簡易清潔地面桌面；確認分工；測試平板與系統' },
+  { start: '09:00', end: '12:30', title: '活動進行', detail: '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：心情小卡＋空氣鳳梨' },
+  { start: '12:30', end: '13:00', title: '午餐時間＋收拾', detail: '大家輪流吃便當；收拾後用推車把備品運回資源教室', meal: true },
+];
+const SCHEDULE_ROLES = [
+  { who: '張珈瀞', items: [
+    { start: '09:00', end: '10:00', title: '活動宣傳：招攬學生', detail: '每 1 小時和宇恆互換工作' },
+    { start: '10:00', end: '11:00', title: '攝影', detail: '鼓勵參加者拿手板拍照' },
+    { start: '11:00', end: '12:00', title: '活動宣傳：招攬學生', detail: '' },
+    { start: '12:00', end: '12:30', title: '攝影', detail: '' },
+    { start: '12:30', end: '12:45', title: '拿便當', detail: '和宇恆到校門口拿便當＋飲料，送到辦公室' } ] },
+  { who: '宇恆', items: [
+    { start: '09:00', end: '10:00', title: '攝影', detail: '鼓勵參加者拿手板拍照；每 1 小時和珈瀞互換工作' },
+    { start: '10:00', end: '11:00', title: '活動宣傳：招攬學生', detail: '' },
+    { start: '11:00', end: '12:00', title: '攝影', detail: '' },
+    { start: '12:00', end: '12:30', title: '活動宣傳：招攬學生', detail: '' },
+    { start: '12:30', end: '12:45', title: '拿便當', detail: '和珈瀞到校門口拿便當＋飲料，送到辦公室' } ] },
+  { who: '宜縈', items: [{ start: '09:00', end: '12:30', title: '關卡一：場控', detail: '認識情緒行為障礙宣導場次' }] },
+  { who: '依庭', items: [{ start: '09:00', end: '12:30', title: '關卡一：協助宣導', detail: '協助認識情緒行為障礙宣導場次' }] },
+  { who: '林昱誠', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: '協助線上簽到、發放驗證碼貼紙、協助抽情緒小卡' }] },
+  { who: '雅萍', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: '初步引導；願意接受資源轉介的參加者交給心理師' }] },
+  { who: '林柏瑋', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: '初步引導；願意接受轉介的交給心理師，並協助心理師翻譯' }] },
+  { who: '芷安', items: [{ start: '09:00', end: '12:30', title: '機動支援', detail: '哪一關需要人手就去支援' }] },
+  { who: '瑞芸', items: [{ start: '09:00', end: '12:30', title: '關卡三：場控＋主控', detail: '植物場次場控，並負責整場活動主控' }] },
+  { who: '曉青', items: [{ start: '09:00', end: '12:30', title: '關卡三：發放植物', detail: '發放空氣鳳梨並說明照顧注意事項' }] },
+  { who: '粘鎧森', items: [{ start: '09:00', end: '12:30', title: '關卡三：發放植物', detail: '發放空氣鳳梨並說明照顧注意事項' }] },
+];
+
+function getScheduleFor_(name) {
+  const mine = [];
+  SCHEDULE_ROLES.forEach(r => { if (name && name.indexOf(r.who) !== -1) Array.prototype.push.apply(mine, r.items); });
+  return { date: EVENT_DATE, all: SCHEDULE_ALL, mine: mine };
+}
+
 // ============ 初始設定（在編輯器手動執行一次；重複執行沒有影響）============
 
 function setup() {
@@ -284,7 +324,7 @@ function getMitakeCredentials_() {
 
 function staffLogin(pin) {
   const name = getStaffName_(pin);
-  return name ? { ok: true, name: name } : { ok: false };
+  return name ? { ok: true, name: name, schedule: getScheduleFor_(name) } : { ok: false };
 }
 
 /**
@@ -443,67 +483,106 @@ function getStaffPageHtml_() {
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@400;700&display=swap">
 <style>
+  /* 海報風格：方格紙 × 鈷藍 × 橘，與活動網頁一致 */
+  :root { --ink: #1f3770; --blue: #2a5bd7; --blue-50: #eef4ff; --blue-100: #dbe7ff; --orange: #e5652a; --paper: #f5f8ff; --grid: #d6e2f7; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #f0fdfa 0%, #e8f4f8 100%); min-height: 100vh; padding: 20px 14px; color: #1f2937; }
-  .container { background: #fff; border-radius: 20px; box-shadow: 0 4px 20px rgba(13,148,136,.12); max-width: 480px; margin: 0 auto; padding: 24px 20px; }
-  h1 { color: #0f766e; font-size: 21px; text-align: center; }
-  .sub { color: #6b7280; font-size: 13px; text-align: center; margin: 4px 0 18px; }
-  .who { font-size: 13px; color: #0f766e; text-align: center; margin-bottom: 14px; }
-  .tabs { display: flex; gap: 4px; background: #f0fdfa; padding: 4px; border-radius: 14px; margin-bottom: 18px; }
-  .tab { flex: 1; background: none; color: #6b7280; min-height: 42px; padding: 8px; font-size: 15px; }
-  .tab.on { background: #fff; color: #115e59; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  body { font-family: 'Chiron GoRound TC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif; min-height: 100vh; padding: 20px 14px 40px; color: var(--ink);
+    background-color: var(--paper); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 22px 22px; }
+  .container { background: #fff; border: 2px solid var(--ink); border-radius: 22px; box-shadow: 5px 5px 0 var(--ink); max-width: 480px; margin: 0 auto; padding: 22px 20px; position: relative; }
+  .ribbon { display: block; width: fit-content; margin: 0 auto 8px; padding: 5px 26px; background: #fff; color: var(--orange); font-weight: 700; font-size: 13px;
+    border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%); }
+  h1 { color: var(--blue); font-size: 26px; text-align: center; font-weight: 700; -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; text-shadow: 2px 2px 0 #fff, 3px 3px 0 var(--ink); letter-spacing: 1px; }
+  .sub { color: #5b6b8c; font-size: 13px; text-align: center; margin: 6px 0 18px; }
+  .who { font-size: 14px; color: var(--ink); font-weight: 700; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 4px; background: var(--blue-50); padding: 4px; border-radius: 14px; margin-bottom: 18px; border: 2px solid var(--ink); }
+  .tab { flex: 1; background: none; color: #5b6b8c; min-height: 42px; padding: 8px; font-size: 15px; box-shadow: none; border: none; }
+  .tab.on { background: var(--blue); color: #fff; }
   .row { display: flex; gap: 10px; }
-  input { flex: 1; width: 100%; padding: 13px 14px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 17px; min-width: 0; }
-  input:focus { outline: none; border-color: #14b8a6; }
+  input { flex: 1; width: 100%; padding: 13px 14px; border: 2px solid var(--ink); border-radius: 12px; font-size: 17px; min-width: 0; font-family: inherit; color: var(--ink); }
+  input:focus { outline: 3px solid var(--blue-100); }
   .center { text-align: center; letter-spacing: 1px; }
-  button { padding: 13px 18px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; min-height: 50px; }
-  .primary { background: #0d9488; color: #fff; }
-  .primary:disabled, .confirm:disabled { background: #d1d5db; cursor: not-allowed; }
-  .confirm { background: #16a34a; color: #fff; flex: 2; }
-  .ghost { background: #f3f4f6; color: #4b5563; flex: 1; }
+  button { font-family: inherit; padding: 13px 18px; border: 2px solid var(--ink); border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; min-height: 50px; box-shadow: 3px 3px 0 var(--ink); transition: transform .1s, box-shadow .1s; color: var(--ink); background: #fff; }
+  button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+  .primary { background: var(--blue); color: #fff; }
+  .primary:disabled, .confirm:disabled { background: #cfd6e4; color: #6b7a99; cursor: not-allowed; }
+  .confirm { background: #2f9e5b; color: #fff; flex: 2; }
+  .ghost { background: #fff; color: var(--ink); flex: 1; }
   .full { width: 100%; }
-  label.lbl { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  label.lbl { display: block; font-size: 14px; font-weight: 700; margin: 14px 0 6px; }
   .opts { display: flex; gap: 8px; flex-wrap: wrap; }
-  .opt { flex: 1; min-width: 30%; background: #fff; border: 2px solid #e5e7eb; color: #374151; font-size: 14px; min-height: 46px; padding: 8px; }
-  .opt.on { border-color: #14b8a6; background: #f0fdfa; color: #115e59; }
-  .hint { font-size: 13px; color: #6b7280; margin-top: 8px; text-align: center; }
-  .msg { padding: 13px; border-radius: 12px; margin-top: 16px; font-size: 15px; line-height: 1.5; }
-  .msg.info { background: #f0fdfa; color: #115e59; }
-  .msg.error { background: #fef2f2; color: #b91c1c; }
-  .msg.success { background: #f0fdf4; color: #15803d; font-weight: 600; }
-  .item { border: 2px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; margin-top: 10px; cursor: pointer; text-align: left; }
-  .item.sel { border-color: #14b8a6; background: #f0fdfa; }
-  .card { background: #f9fafb; border-radius: 12px; padding: 4px 14px; margin-top: 14px; border: 1px solid #e5e7eb; }
-  .kv { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e5e7eb; gap: 12px; align-items: center; }
+  .opt { flex: 1; min-width: 30%; background: #fff; color: var(--ink); font-size: 14px; min-height: 46px; padding: 8px; box-shadow: 2px 2px 0 var(--ink); }
+  .opt.on { background: var(--blue-50); color: var(--blue); }
+  .opt.on::before { content: '✳ '; color: var(--orange); }
+  .hint { font-size: 13px; color: #5b6b8c; margin-top: 8px; text-align: center; line-height: 1.5; }
+  .msg { padding: 13px; border-radius: 12px; margin-top: 16px; font-size: 15px; line-height: 1.5; border: 2px solid; }
+  .msg.info { background: var(--blue-50); color: var(--ink); border-color: var(--blue-100); }
+  .msg.error { background: #fff1ee; color: #b42318; border-color: #f5b5a6; }
+  .msg.success { background: #ecfbf1; color: #1d7a45; font-weight: 700; border-color: #9fdcb8; }
+  .item { border: 2px solid var(--ink); border-radius: 12px; padding: 12px 14px; margin-top: 10px; cursor: pointer; text-align: left; }
+  .item.sel { background: var(--blue-50); box-shadow: 3px 3px 0 var(--ink); }
+  .card { background: #fff; border-radius: 14px; padding: 4px 14px; margin-top: 14px; border: 2px solid var(--ink); }
+  .kv { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px dashed var(--grid); gap: 12px; align-items: center; }
   .kv:last-child { border-bottom: none; }
-  .k { color: #6b7280; font-weight: 600; white-space: nowrap; }
-  .v { font-weight: 600; text-align: right; word-break: break-all; }
-  .big { color: #0f766e; font-size: 22px; letter-spacing: 1px; }
-  .tag { padding: 4px 10px; border-radius: 999px; font-size: 13px; }
-  .tag.no { background: #fef3c7; color: #92400e; }
-  .tag.yes { background: #dcfce7; color: #166534; }
+  .k { color: #5b6b8c; font-weight: 700; white-space: nowrap; }
+  .v { font-weight: 700; text-align: right; word-break: break-all; }
+  .big { color: var(--blue); font-size: 22px; letter-spacing: 1px; }
+  .tag { padding: 4px 10px; border-radius: 999px; font-size: 13px; border: 2px solid; }
+  .tag.no { background: #fff6e8; color: #a14a12; border-color: #f3c58f; }
+  .tag.yes { background: #ecfbf1; color: #1d7a45; border-color: #9fdcb8; }
   .actions { display: flex; gap: 10px; margin-top: 14px; }
-  .codebox { text-align: center; background: #f0fdfa; border-radius: 16px; padding: 18px; margin-top: 16px; }
-  .codebox .code { font-size: 40px; font-weight: 800; color: #115e59; letter-spacing: 3px; }
-  .hidden { display: none; }
-  .logout { background: none; color: #9ca3af; font-size: 13px; min-height: 0; padding: 14px 0 0; width: 100%; font-weight: 400; }
+  .codebox { text-align: center; background: var(--blue-50); border: 2px solid var(--ink); border-radius: 16px; padding: 18px; margin-top: 16px; }
+  .codebox .code { font-size: 40px; font-weight: 800; color: var(--blue); letter-spacing: 3px; }
+  .hidden { display: none !important; }
+  .guide { display: block; text-align: center; margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--blue); text-decoration: none; border: 2px dashed var(--blue-100); border-radius: 12px; padding: 10px; background: var(--blue-50); }
+  .logout { background: none; color: #8a97b3; font-size: 13px; min-height: 0; padding: 14px 0 0; width: 100%; font-weight: 400; border: none; box-shadow: none; }
+  /* 小鈴鐺 */
+  .bell { position: relative; min-height: 44px; padding: 6px 14px; font-size: 15px; background: #fff; flex-shrink: 0; }
+  .bell .dot { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 12px; line-height: 18px; border: 2px solid var(--ink); }
+  .bell.ring { animation: ring 1.2s ease-in-out 3; }
+  @keyframes ring { 0%,100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-12deg); } 45% { transform: rotate(8deg); } 60% { transform: rotate(-5deg); } }
+  .nowbar { display: flex; gap: 10px; align-items: flex-start; background: #fff6e8; border: 2px solid var(--ink); border-radius: 14px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; line-height: 1.5; cursor: pointer; }
+  .nowbar b { color: var(--orange); }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(31,55,112,.35); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { background: var(--paper); width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto; border: 2px solid var(--ink); border-bottom: none; border-radius: 22px 22px 0 0; padding: 18px 16px 28px; }
+  .sheet h2 { font-size: 19px; color: var(--ink); display: flex; justify-content: space-between; align-items: center; }
+  .sheet h3 { font-size: 14px; color: var(--orange); margin: 16px 0 8px; letter-spacing: 1px; }
+  .sheet .close { min-height: 38px; padding: 4px 14px; font-size: 14px; }
+  .tl { background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+  .tl .t { font-weight: 700; color: var(--blue); font-size: 13px; margin-bottom: 2px; }
+  .tl .ti { font-weight: 700; font-size: 15px; }
+  .tl .d { font-size: 13px; color: #5b6b8c; margin-top: 2px; line-height: 1.5; }
+  .tl.now { background: #fff6e8; box-shadow: 3px 3px 0 var(--orange); border-color: var(--orange); }
+  .tl.now .t::after { content: '現在'; margin-left: 8px; background: var(--orange); color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+  .tl.past { opacity: .5; }
+  .tl.meal .t::before { content: '🍱 '; }
+  .note { font-size: 13px; color: #5b6b8c; background: #fff; border: 2px dashed var(--grid); border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
+  .toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 60; background: var(--orange); color: #fff; font-weight: 700; padding: 12px 18px; border: 2px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); max-width: 92vw; text-align: center; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>📋 工作人員系統</h1>
-  <p class="sub">修平科大 - 特殊教育宣導「給情緒喘口氣」</p>
+  <span class="ribbon">✳ 115年修平特殊教育宣導</span>
+  <h1>工作人員系統</h1>
+  <p class="sub">「給情緒喘口氣」活動現場用</p>
 
   <div id="loginView">
     <div class="row">
       <input id="pinInput" class="center" type="password" inputmode="numeric" autocomplete="off" placeholder="個人密碼">
       <button class="primary" id="loginBtn">登入</button>
     </div>
+    <a class="guide" href="${GUIDE_URL}" target="_blank" rel="noopener">▶ 第一次用？看操作示範動畫</a>
   </div>
 
   <div id="mainView" class="hidden">
-    <p class="who" id="who"></p>
+    <div class="topbar">
+      <p class="who" id="who"></p>
+      <button type="button" class="bell" id="bellBtn" aria-label="今日提醒">🔔 提醒<span class="dot hidden" id="bellDot"></span></button>
+    </div>
+    <div class="nowbar hidden" id="nowBar"></div>
     <div class="tabs">
       <button class="tab on" data-tab="pickup">領取查詢</button>
       <button class="tab" data-tab="register">代為報到</button>
@@ -538,6 +617,7 @@ function getStaffPageHtml_() {
       <div id="regOut"></div>
     </div>
 
+    <a class="guide" href="${GUIDE_URL}" target="_blank" rel="noopener">▶ 操作示範動畫</a>
     <button class="logout" id="logoutBtn">登出</button>
   </div>
 </div>
@@ -545,6 +625,8 @@ function getStaffPageHtml_() {
 <script>
   var pin = sessionStorage.getItem('staffPin') || '';
   var staffName = sessionStorage.getItem('staffName') || '';
+  var schedule = null;
+  try { schedule = JSON.parse(sessionStorage.getItem('staffSchedule') || 'null'); } catch (e) { schedule = null; }
   var results = [];
   var choice = { identity: '', age: '' };
   var $ = function (id) { return document.getElementById(id); };
@@ -573,8 +655,9 @@ function getStaffPageHtml_() {
   function showMain() {
     $('loginView').classList.add('hidden');
     $('mainView').classList.remove('hidden');
-    $('who').textContent = '目前登入：' + staffName;
+    $('who').textContent = '👋 ' + staffName;
     $('queryInput').focus();
+    refreshReminders(true);
   }
   function login() {
     var value = $('pinInput').value.trim();
@@ -583,14 +666,15 @@ function getStaffPageHtml_() {
     google.script.run.withSuccessHandler(function (r) {
       $('loginBtn').disabled = false;
       if (r && r.ok) {
-        pin = value; staffName = r.name;
+        pin = value; staffName = r.name; schedule = r.schedule || null;
         sessionStorage.setItem('staffPin', pin); sessionStorage.setItem('staffName', staffName);
+        sessionStorage.setItem('staffSchedule', JSON.stringify(schedule));
         showMain();
       } else { $('pinInput').value = ''; alert('密碼錯誤'); }
     }).withFailureHandler(function () { $('loginBtn').disabled = false; alert('連線失敗，請再試一次'); }).staffLogin(value);
   }
   function logout() {
-    sessionStorage.removeItem('staffPin'); sessionStorage.removeItem('staffName');
+    sessionStorage.removeItem('staffPin'); sessionStorage.removeItem('staffName'); sessionStorage.removeItem('staffSchedule');
     location.reload();
   }
 
@@ -744,6 +828,95 @@ function getStaffPageHtml_() {
       Array.prototype.forEach.call(document.querySelectorAll('.opt[data-group]'), function (x) { x.classList.remove('on'); });
     }, $('regOut'));
   }
+
+  // ---------- 小鈴鐺：活動當天時程與個人分工 ----------
+  function nowDate() { return window.__STAFF_NOW__ ? new Date(window.__STAFF_NOW__) : new Date(); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function toMin(hm) { var p = hm.split(':'); return Number(p[0]) * 60 + Number(p[1]); }
+  function today() { var d = nowDate(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function nowMin() { var d = nowDate(); return d.getHours() * 60 + d.getMinutes(); }
+  function status(it) {
+    if (!schedule || today() !== schedule.date) return '';
+    var m = nowMin();
+    if (m >= toMin(it.end)) return 'past';
+    if (m >= toMin(it.start)) return 'now';
+    return '';
+  }
+  function currentItems() {
+    if (!schedule) return [];
+    return schedule.mine.concat(schedule.all).filter(function (it) { return status(it) === 'now'; });
+  }
+  var seen = {};
+  try { seen = JSON.parse(sessionStorage.getItem('staffSeen') || '{}'); } catch (e) { seen = {}; }
+  function keyOf(it) { return it.start + it.title; }
+  function refreshReminders(first) {
+    var bell = $('bellBtn'), dot = $('bellDot'), bar = $('nowBar');
+    if (!schedule) { bell.classList.add('hidden'); bar.classList.add('hidden'); return; }
+    bell.classList.remove('hidden');
+    var cur = currentItems();
+    var mineNow = cur.filter(function (it) { return schedule.mine.indexOf(it) !== -1; });
+    var fresh = cur.filter(function (it) { return !seen[keyOf(it)]; });
+    dot.textContent = fresh.length;
+    dot.classList.toggle('hidden', !fresh.length);
+    if (fresh.length && !first) { bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring'); }
+    // 午餐時間跳出提示（每個人只跳一次）
+    cur.forEach(function (it) {
+      if (it.meal && !seen['toast' + keyOf(it)]) { seen['toast' + keyOf(it)] = 1; saveSeen(); toast('🍱 ' + it.start + ' 午餐時間到了！大家輪流吃便當喔'); }
+    });
+    var show = mineNow.length ? mineNow[0] : cur[0];
+    if (show) {
+      bar.innerHTML = '';
+      bar.appendChild(el('span', '', '⏰'));
+      var box = el('div', '');
+      var b = el('b', '', '現在 ' + show.start + '–' + show.end + '：' + show.title);
+      box.appendChild(b);
+      if (show.detail) box.appendChild(el('div', '', show.detail));
+      bar.appendChild(box);
+      bar.classList.remove('hidden');
+    } else bar.classList.add('hidden');
+  }
+  function saveSeen() { try { sessionStorage.setItem('staffSeen', JSON.stringify(seen)); } catch (e) {} }
+  function toast(text) {
+    var t = el('div', 'toast', text);
+    t.onclick = function () { t.remove(); };
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 12000);
+  }
+  function tlItem(it) {
+    var st = status(it);
+    var row = el('div', 'tl' + (st ? ' ' + st : '') + (it.meal ? ' meal' : ''));
+    row.appendChild(el('div', 't', it.start + '–' + it.end));
+    var body = el('div', '');
+    body.appendChild(el('div', 'ti', it.title));
+    if (it.detail) body.appendChild(el('div', 'd', it.detail));
+    row.appendChild(body);
+    return row;
+  }
+  function openSheet() {
+    currentItems().forEach(function (it) { seen[keyOf(it)] = 1; });
+    saveSeen();
+    refreshReminders(true);
+    var bg = el('div', 'sheet-bg');
+    var sh = el('div', 'sheet');
+    var h = el('h2', '', '🔔 今日提醒');
+    var x = el('button', 'close', '關閉');
+    x.onclick = function () { bg.remove(); };
+    h.appendChild(x);
+    sh.appendChild(h);
+    var d = schedule.date.split('-');
+    if (today() !== schedule.date) sh.appendChild(el('div', 'note', '活動日是 ' + Number(d[1]) + '/' + Number(d[2]) + '（六）。當天會自動標出「現在」的時段，換時段時小鈴鐺會響。'));
+    sh.appendChild(el('h3', '', '✳ 我的工作（' + staffName + '）'));
+    if (schedule.mine.length) schedule.mine.forEach(function (it) { sh.appendChild(tlItem(it)); });
+    else sh.appendChild(el('div', 'note', '沒有找到你的個人分工，請依照現場主控安排。'));
+    sh.appendChild(el('h3', '', '✳ 全體時程'));
+    schedule.all.forEach(function (it) { sh.appendChild(tlItem(it)); });
+    bg.appendChild(sh);
+    bg.onclick = function (e) { if (e.target === bg) bg.remove(); };
+    document.body.appendChild(bg);
+  }
+  $('bellBtn').onclick = openSheet;
+  $('nowBar').onclick = openSheet;
+  setInterval(function () { if (pin) refreshReminders(false); }, 30000);
 
   $('loginBtn').onclick = login;
   $('pinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
