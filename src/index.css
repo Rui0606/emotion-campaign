@@ -110,5 +110,6 @@ input, textarea, select {
 }
 input::placeholder, textarea::placeholder { color: #8a97b3; -webkit-text-fill-color: #8a97b3; }
 
-/* 中文換行：盡量在標點後才斷行，不在詞中間切開 */
-body { word-break: keep-all; overflow-wrap: anywhere; }
+/* 中文換行：短句（標題、按鈕、置中提示）盡量在標點後才斷行；長段落維持一般換行，避免標點單獨落到下一行 */
+h1, h2, h3, h4, button, label, .text-center, .text-center * { word-break: keep-all; overflow-wrap: anywhere; }
+p { text-wrap: pretty; }

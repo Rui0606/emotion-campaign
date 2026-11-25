@@ -1593,7 +1593,7 @@ export default function App() {
             {isChild
               ? '請到領取處，告訴工作人員你的序號和名字。'
               : pick(
-                '請到領取處告訴工作人員你的序號，並說出姓名核對。',
+                '請到領取處，告訴工作人員你的序號，並說出姓名核對。',
                 'Go to the pickup counter, tell the staff your code and say your name for verification.',
                 'Hãy đến quầy nhận quà, cho nhân viên biết mã số và nói họ tên của bạn để đối chiếu.'
               )}
