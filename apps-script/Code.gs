@@ -743,7 +743,19 @@ function getStaffPageHtml_() {
     '協助線上簽到，看到序號後協助抽情緒小卡': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師；協助心理師翻譯': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý; hỗ trợ phiên dịch cho chuyên viên tâm lý',
-    '12/4（五）中午 行前說明': 'Trưa 12/4 (thứ Sáu): họp hướng dẫn trước hoạt động'
+    '12/4（五）中午 行前說明': 'Trưa 12/4 (thứ Sáu): họp hướng dẫn trước hoạt động',
+    '活動宣傳：招攬學生': 'Quảng bá hoạt động: mời sinh viên tham gia', '每 1 小時和謝宇恆互換': 'Mỗi 1 tiếng đổi việc với 謝宇恆',
+    '攝影': 'Chụp ảnh', '鼓勵參加者拿手板拍照': 'Khuyến khích người tham gia cầm bảng cầm tay chụp ảnh',
+    '鼓勵參加者拿手板拍照；每 1 小時和張珈瀞互換': 'Khuyến khích người tham gia cầm bảng cầm tay chụp ảnh; mỗi 1 tiếng đổi việc với 張珈瀞',
+    '拿便當': 'Lấy cơm hộp', '和另一位工讀生到校門口拿便當＋飲料，送到辦公室': 'Cùng một bạn làm thêm khác ra cổng trường lấy cơm hộp và đồ uống, mang về văn phòng',
+    '關卡一：場控': 'Cửa 1: Điều phối', '關卡一：支援（同楊宜縈）': 'Cửa 1: Hỗ trợ (cùng 楊宜縈)',
+    '協助線上簽到，看到序號後協助抽情緒小卡；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
+    '關卡二：場控': 'Cửa 2: Điều phối', '關卡二：心理師': 'Cửa 2: Chuyên viên tâm lý', '關卡二：心理師（接手）': 'Cửa 2: Chuyên viên tâm lý (thay ca)',
+    '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）': 'Tư vấn quan tâm người có điểm cao, nhập mã số vào mục "關懷登記" để ghi nhận; nói chuyện xong thì đưa mã thông quan (không muốn nói chuyện cũng đưa)',
+    '關卡三：場控': 'Cửa 3: Điều phối', '關卡三：支援（同張瑞芸）': 'Cửa 3: Hỗ trợ (cùng 張瑞芸)', '關卡三：發放空氣鳳梨': 'Cửa 3: Phát cây không khí',
+    '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙': 'Đối chiếu mã số và họ tên rồi xác nhận nhận quà; thu lại nhãn dán mã xác nhận của người được điểm danh hộ',
+    '發植物並說明照顧方式；200 份發完改送資源教室小物': 'Phát cây và hướng dẫn cách chăm sóc; phát hết 200 cây thì đổi sang quà nhỏ của phòng tài nguyên',
+    '機動支援': 'Hỗ trợ linh động', '哪一關需要人手就去支援': 'Cửa nào cần người thì đến hỗ trợ'
   };
   var VI_RULES = [
     [/^序號只要輸入數字/, 'Chỉ cần nhập số, có thể bỏ số 0 và chữ SEM ở đầu: 1, 001, SEM001 đều là SEM001.'],
