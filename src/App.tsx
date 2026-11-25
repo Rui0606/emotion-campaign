@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2, ClipboardList, Sprout, UserRoundPlus } from 'lucide-react';
+import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2, ClipboardList, Sprout, UserRoundPlus, Download } from 'lucide-react';
 import { Language, QuizQuestion } from './types';
 import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
 import { playSound } from './utils/audio';
@@ -190,7 +190,7 @@ export default function App() {
   const bsrsComplete = allBsrsQuestions.every(q => bsrsAnswers[q.id] !== undefined);
   const totalBaseScore = BSRS_QUESTIONS.reduce((sum, q) => sum + (bsrsAnswers[q.id] || 0), 0);
   const suicideScore = bsrsAnswers[BSRS_SUICIDE_QUESTION.id] || 0;
-  const needsCounselor = totalBaseScore >= 6 || suicideScore >= 2;
+  const needsCounselor = totalBaseScore >= 10 || suicideScore >= 2; // 依活動規定：前 5 題 10 分以上，或第 6 題 2 分以上
 
   // 防止用瀏覽器「上一頁／下一頁」跳過關卡
   const KIDS_STEPS: Step[] = ['kids_welcome', 'kids_quiz'];
@@ -199,6 +199,7 @@ export default function App() {
     if (step === 'language' || step === 'checkin') return step;
     if (!hasCheckin) return 'checkin';
     if (completed) return 'done';
+    if (isChild && step === 'survey') return kidsShowResults ? 'survey' : 'kids_quiz';
     if (isChild && ADULT_STEPS.includes(step)) return 'kids_welcome';
     if (!isChild && KIDS_STEPS.includes(step)) return 'welcome';
     switch (step) {
@@ -206,7 +207,7 @@ export default function App() {
       case 'bsrs_result': return bsrsComplete ? 'bsrs_result' : resolveStep('bsrs');
       case 'counselor': return bsrsComplete && needsCounselor ? 'counselor' : resolveStep('bsrs_result');
       case 'survey': return bsrsComplete && (!needsCounselor || counselorPassed) ? 'survey' : resolveStep('counselor');
-      case 'done': return isChild ? 'kids_quiz' : resolveStep('survey');
+      case 'done': return resolveStep('survey');
       default: return step;
     }
   };
@@ -350,6 +351,10 @@ export default function App() {
     const phone = normalizePhone(checkinPhone);
     if (!checkinNameInput.trim() || !checkinIdentity || !checkinAge) {
       setCheckinError('form');
+      return;
+    }
+    if (checkinAge === 'child') {
+      setCheckinError('child_staff');
       return;
     }
     if (!phone) {
@@ -634,7 +639,7 @@ export default function App() {
             <span className="font-bold text-teal-800 text-sm">{pick('回首頁', 'Home', 'Trang chủ')}</span>
           </button>
 
-          {step === 'kids_welcome' || step === 'kids_quiz' ? (
+          {step === 'kids_welcome' || step === 'kids_quiz' || (isChild && step === 'survey') ? (
             <button
               type="button"
               onClick={() => setZhuyinOn(v => !v)}
@@ -725,6 +730,12 @@ export default function App() {
           '這支手機已經報到過了。如果是你本人，請填寫和報到時相同的姓名，或改用「我已經有序號」。',
           'This number has already checked in. If it is yours, enter the same name you used before, or choose "I already have a code".',
           'Số điện thoại này đã điểm danh. Nếu là bạn, hãy nhập đúng họ tên đã dùng trước đó, hoặc chọn "Tôi đã có mã số".'
+        );
+      case 'child_staff':
+        return pick(
+          '未滿 12 歲請到櫃台，由工作人員協助報到。拿到序號後，可以用家長的手機選「我已經有序號」參加活動。',
+          'Children under 12: please check in at the counter with our staff. Then use a parent\'s phone and choose "I already have a code".',
+          'Trẻ dưới 12 tuổi: vui lòng đến quầy để nhân viên điểm danh giúp. Sau đó dùng điện thoại của phụ huynh và chọn "Tôi đã có mã số".'
         );
       case 'full':
         return pick('序號已全部發放完畢，請洽現場工作人員。', 'All codes have been issued. Please ask our staff.', 'Đã phát hết mã số. Vui lòng liên hệ nhân viên.');
@@ -862,7 +873,7 @@ export default function App() {
                     <input
                       type="radio" name="ci-age" value={opt.value} className="sr-only"
                       checked={checkinAge === opt.value}
-                      onChange={() => { setCheckinAge(opt.value); setCheckinError(null); }}
+                      onChange={() => { setCheckinAge(opt.value); setCheckinError(opt.value === 'child' ? 'child_staff' : null); }}
                     />
                     {opt.label[lang]}
                   </label>
@@ -1115,11 +1126,10 @@ export default function App() {
         </button>
       ) : (
         <button
-          onClick={() => submitCompletion()}
-          disabled={completeBusy}
-          className={`${primaryBtn} sticky bottom-6 shadow-lg shadow-teal-900/20 z-10 disabled:opacity-70`}
+          onClick={() => goTo('survey')}
+          className={`${primaryBtn} sticky bottom-6 shadow-lg shadow-teal-900/20 z-10`}
         >
-          {completeBusy ? <><Loader2 className="w-5 h-5 animate-spin" /> 送出中…</> : <>完成 <CheckCircle2 className="w-5 h-5" /></>}
+          <Zy text="下一步：填回饋問卷" on={zhuyinOn} /> <ChevronRight className="w-5 h-5" />
         </button>
       )}
     </motion.div>
@@ -1349,6 +1359,7 @@ export default function App() {
                     </span>
                     <span className={`text-xs leading-tight text-center ${checked ? 'text-teal-700 font-semibold' : 'text-gray-500'}`}>
                       {opt.label[lang]}
+                      <span className="block text-[11px] opacity-80">{pick(`${opt.value} 分`, `${opt.value} pt`, `${opt.value} điểm`)}</span>
                     </span>
                   </motion.label>
                 );
@@ -1614,13 +1625,16 @@ export default function App() {
   );
 
   const renderSurvey = () => {
+    // 兒童版（只有中文）可開注音
+    const zt = (text: string) => (isChild ? <Zy text={text} on={zhuyinOn} /> : text);
+    const zc = isChild && zhuyinOn ? ' zy-on' : '';
     const scale = (key: 'q2' | 'q3', id: string, question: string) => (
       <fieldset
         id={id}
         className={`bg-white p-5 rounded-3xl shadow-sm border space-y-4 ${surveyError && !survey[key] ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
       >
         <legend className="sr-only">{question}</legend>
-        <p className="font-semibold text-gray-900 text-[15px] leading-relaxed" aria-hidden="true">{question}</p>
+        <p className={`font-semibold text-gray-900 text-[15px] leading-relaxed${zc}`} aria-hidden="true">{zt(question)}</p>
         <div className="grid grid-cols-5 gap-1.5">
           {[1, 2, 3, 4, 5].map(v => {
             const checked = survey[key] === v;
@@ -1638,8 +1652,8 @@ export default function App() {
           })}
         </div>
         <div className="flex justify-between text-xs text-gray-500">
-          <span>1 {SURVEY.scaleLow[lang]}</span>
-          <span>5 {SURVEY.scaleHigh[lang]}</span>
+          <span className={zc}>1 {zt(SURVEY.scaleLow[lang])}</span>
+          <span className={zc}>5 {zt(SURVEY.scaleHigh[lang])}</span>
         </div>
       </fieldset>
     );
@@ -1650,7 +1664,7 @@ export default function App() {
         className={`bg-white p-5 rounded-3xl shadow-sm border space-y-3 ${surveyError && !survey[key] ? 'border-red-400 ring-2 ring-red-100' : 'border-white'}`}
       >
         <legend className="sr-only">{question}</legend>
-        <p className="font-semibold text-gray-900 text-[15px] leading-relaxed" aria-hidden="true">{question}</p>
+        <p className={`font-semibold text-gray-900 text-[15px] leading-relaxed${zc}`} aria-hidden="true">{zt(question)}</p>
         <div className="grid grid-cols-2 gap-2">
           {options.map(opt => {
             const checked = survey[key] === opt.value;
@@ -1663,7 +1677,7 @@ export default function App() {
                   type="radio" name={key} value={opt.value} checked={checked} className="sr-only"
                   onChange={() => { setSurvey(prev => ({ ...prev, [key]: opt.value })); setSurveyError(false); playSound('click'); }}
                 />
-                {opt.label[lang]}
+                <span className={zc}>{zt(opt.label[lang])}</span>
               </label>
             );
           })}
@@ -1679,14 +1693,14 @@ export default function App() {
         <div className="bg-white/90 p-5 rounded-3xl border border-teal-100 shadow-sm space-y-2">
           <div className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-teal-600" />
-            <h2 className="text-xl font-bold text-gray-900">{SURVEY.title[lang]}</h2>
+            <h2 className={`text-xl font-bold text-gray-900${zc}`}>{zt(SURVEY.title[lang])}</h2>
           </div>
-          <p className="text-gray-600 text-sm leading-relaxed">{SURVEY.intro[lang]}</p>
+          <p className={`text-gray-600 text-sm leading-relaxed${zc}`}>{zt(SURVEY.intro[lang])}</p>
         </div>
 
         {surveyError && (
           <div role="alert" className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-medium">
-            ⚠️ {pick('還有必填的題目沒有作答喔！', 'Please answer all required questions.', 'Vui lòng trả lời tất cả các câu hỏi bắt buộc.')}
+            ⚠️ {zt(pick('還有必填的題目沒有作答喔！', 'Please answer all required questions.', 'Vui lòng trả lời tất cả các câu hỏi bắt buộc.'))}
           </div>
         )}
 
@@ -1697,7 +1711,7 @@ export default function App() {
           {scale('q3', 'sv-q3', SURVEY.q3[lang])}
 
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-white space-y-3">
-            <label htmlFor="sv-q4" className="block font-semibold text-gray-900 text-[15px] leading-relaxed">{SURVEY.q4[lang]}</label>
+            <label htmlFor="sv-q4" className={`block font-semibold text-gray-900 text-[15px] leading-relaxed${zc}`}>{zt(SURVEY.q4[lang])}</label>
             <textarea
               id="sv-q4" rows={4} maxLength={500}
               value={survey.q4}
@@ -1716,7 +1730,7 @@ export default function App() {
           <button type="submit" disabled={completeBusy} className={`${primaryBtn} disabled:opacity-70`}>
             {completeBusy
               ? <><Loader2 className="w-5 h-5 animate-spin" /> {pick('送出中…', 'Submitting…', 'Đang gửi…')}</>
-              : <>{pick('送出問卷，完成活動', 'Submit and finish', 'Gửi và hoàn thành')} <CheckCircle2 className="w-5 h-5" /></>}
+              : <>{zt(pick('送出問卷，完成活動', 'Submit and finish', 'Gửi và hoàn thành'))} <CheckCircle2 className="w-5 h-5" /></>}
           </button>
         </form>
       </motion.div>
@@ -1763,7 +1777,18 @@ export default function App() {
                 />
               </div>
 
-              <button type="button" onClick={() => setShowCareModal(false)} className={`${primaryBtn} mt-4`}>
+              <a
+                href={asset('care.jpg')}
+                download="空氣鳳梨照顧說明.jpg"
+                className="btn-pop w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-base py-3 px-6 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <Download className="w-5 h-5" /> {pick('下載照顧說明', 'Download care guide', 'Tải hướng dẫn chăm sóc')}
+              </a>
+              <p className="text-xs text-gray-500">
+                {pick('下載不了的話，也可以直接截圖保存喔！', 'If the download does not work, just take a screenshot!', 'Nếu không tải được, bạn có thể chụp màn hình để lưu lại!')}
+              </p>
+
+              <button type="button" onClick={() => setShowCareModal(false)} className={`${primaryBtn} mt-2`}>
                 {pick('我知道了', 'Got it', 'Tôi hiểu rồi')} <CheckCircle2 className="w-5 h-5" />
               </button>
             </div>

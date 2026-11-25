@@ -8,7 +8,7 @@ export type AgeGroup = 'adult' | 'child';
 
 export type CheckinError =
   | 'invalid_name' | 'invalid_identity' | 'invalid_age' | 'invalid_phone'
-  | 'phone_taken' | 'full' | 'busy' | 'server' | 'network' | 'not_found' | 'invalid_survey';
+  | 'phone_taken' | 'child_staff' | 'full' | 'busy' | 'server' | 'network' | 'not_found' | 'invalid_survey';
 
 export interface CheckinResult {
   ok: boolean;
@@ -84,7 +84,7 @@ export const registerCheckin = async (name: string, identity: string, age: AgeGr
 };
 
 export const verifyCheckinCode = async (code: string): Promise<CheckinResult> => {
-  if (PREVIEW) return { ok: true, code, status: 'existing', age: previewAge, completed: false };
+  if (PREVIEW) { const n = Number(String(code).replace(/\D/g, '')); return { ok: true, code: 'SEM' + String(n).padStart(3, '0'), status: 'existing', age: n >= 900 ? 'child' : previewAge, completed: false }; }
   try {
     const data = await request(`${CHECKIN_API_URL}?action=verify&code=${encodeURIComponent(code)}`);
     if (data && data.ok) return { ok: true, code: String(data.code), status: 'existing', age: toAge(data.age), completed: !!data.completed };

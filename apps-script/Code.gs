@@ -42,14 +42,15 @@ const PICKED_MARK = '已領';
 // 報到名單欄位（1-based）
 const COL = {
   CODE: 1, TIME: 2, NAME: 3, IDENTITY: 4, AGE: 5, PHONE: 6, METHOD: 7, REG_BY: 8,
-  SMS: 9, DONE: 10, DONE_AT: 11, PICKED: 12, PICKED_AT: 13, PICKED_BY: 14,
+  SMS: 9, DONE: 10, DONE_AT: 11, PICKED: 12, PICKED_AT: 13, PICKED_BY: 14, CARE: 15,
 };
 const HEADERS = ['序號', '報到時間', '姓名', '身分', '年齡組別', '手機', '報到方式', '代報經辦人',
-  '簡訊狀態', '完成狀態', '完成時間', '領取狀態', '領取時間', '領取經辦人'];
+  '簡訊狀態', '完成狀態', '完成時間', '領取狀態', '領取時間', '領取經辦人', '關懷註記'];
+const CARE_MARK = '需追蹤關懷';
 
 // 問卷（匿名：不記錄姓名、手機、序號）
 const SURVEY_HEADERS = ['送出時間', '身分', '性別', '1.協助特教學生的單位',
-  '2.更認識情緒行為障礙(1-5)', '3.會尊重並理解身障同學(1-5)', '4.建議或鼓勵'];
+  '2.更認識情緒行為障礙(1-5)', '3.會尊重並理解身障同學(1-5)', '4.建議或鼓勵', '年齡組別'];
 const SURVEY_OPTIONS = { gender: ['生理男性', '生理女性'], q1: ['警衛室', '學發中心資源教室'] };
 
 // ============ 活動當天時程與分工（小鈴鐺提醒）============
@@ -57,39 +58,45 @@ const SURVEY_OPTIONS = { gender: ['生理男性', '生理女性'], q1: ['警衛�
 // 改分工時只要改這裡，重新部署即可；時間格式 HH:mm。
 const EVENT_DATE = '2026-12-05';
 const GUIDE_URL = 'https://rui0606.github.io/emotion-campaign/guide.html'; // 操作示範動畫頁
+const PRE_BRIEF = '12/4（五）中午 行前說明';
 const SCHEDULE_ALL = [
-  { start: '08:30', end: '09:00', title: '場佈（全體）', detail: '用推車把備品（植物、衛生紙、垃圾袋、簽到表）運到微風廣場；張貼海報、擺植物；簡易清潔地面桌面；確認分工；測試平板與系統' },
-  { start: '09:00', end: '12:30', title: '活動進行', detail: '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：心情小卡＋空氣鳳梨' },
-  { start: '12:30', end: '13:00', title: '午餐時間＋收拾', detail: '大家輪流吃便當；收拾後用推車把備品運回資源教室', meal: true },
+  { start: '08:30', end: '09:00', title: '場佈（全體）', detail: '推車把備品運到微風廣場（植物、衛生紙、垃圾袋、簽到表、平板、筆電、延長線、膠帶）；張貼海報、擺植物；說明注意事項、測試' },
+  { start: '09:00', end: '12:30', title: '活動進行', detail: '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：回饋＋空氣鳳梨' },
+  { start: '11:30', end: '12:30', title: '午餐時間', detail: '大家輪流吃便當，確認有人接手工作再去', meal: true },
+  { start: '12:30', end: '13:00', title: '收拾', detail: '清點物品後，用推車把備品運回資源教室' },
 ];
+const ST1 = '協助線上簽到，看到序號後協助抽情緒小卡';
+const ST2 = '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師';
+const COUNSEL = '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）';
+const ST3 = '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙';
+const LUNCH = { start: '11:00', end: '11:30', title: '拿便當', detail: '和另一位工讀生到校門口拿便當＋飲料，送到辦公室' };
 const SCHEDULE_ROLES = [
   { who: '張珈瀞', items: [
-    { start: '09:00', end: '10:00', title: '活動宣傳：招攬學生', detail: '每 1 小時和宇恆互換工作' },
-    { start: '10:00', end: '11:00', title: '攝影', detail: '鼓勵參加者拿手板拍照' },
-    { start: '11:00', end: '12:00', title: '活動宣傳：招攬學生', detail: '' },
-    { start: '12:00', end: '12:30', title: '攝影', detail: '' },
-    { start: '12:30', end: '12:45', title: '拿便當', detail: '和宇恆到校門口拿便當＋飲料，送到辦公室' } ] },
-  { who: '宇恆', items: [
-    { start: '09:00', end: '10:00', title: '攝影', detail: '鼓勵參加者拿手板拍照；每 1 小時和珈瀞互換工作' },
-    { start: '10:00', end: '11:00', title: '活動宣傳：招攬學生', detail: '' },
-    { start: '11:00', end: '12:00', title: '攝影', detail: '' },
-    { start: '12:00', end: '12:30', title: '活動宣傳：招攬學生', detail: '' },
-    { start: '12:30', end: '12:45', title: '拿便當', detail: '和珈瀞到校門口拿便當＋飲料，送到辦公室' } ] },
-  { who: '宜縈', items: [{ start: '09:00', end: '12:30', title: '關卡一：場控', detail: '認識情緒行為障礙宣導場次' }] },
-  { who: '依庭', items: [{ start: '09:00', end: '12:30', title: '關卡一：協助宣導', detail: '協助認識情緒行為障礙宣導場次' }] },
-  { who: '林昱誠', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: '協助線上簽到、發放驗證碼貼紙、協助抽情緒小卡' }] },
-  { who: '雅萍', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: '初步引導；願意接受資源轉介的參加者交給心理師' }] },
-  { who: '林柏瑋', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: '初步引導；願意接受轉介的交給心理師，並協助心理師翻譯' }] },
-  { who: '芷安', items: [{ start: '09:00', end: '12:30', title: '機動支援', detail: '哪一關需要人手就去支援' }] },
-  { who: '瑞芸', items: [{ start: '09:00', end: '12:30', title: '關卡三：場控＋主控', detail: '植物場次場控，並負責整場活動主控' }] },
-  { who: '曉青', items: [{ start: '09:00', end: '12:30', title: '關卡三：發放植物', detail: '發放空氣鳳梨並說明照顧注意事項' }] },
-  { who: '粘鎧森', items: [{ start: '09:00', end: '12:30', title: '關卡三：發放植物', detail: '發放空氣鳳梨並說明照顧注意事項' }] },
+    { start: '09:00', end: '10:00', title: '活動宣傳：招攬學生', detail: '每 1 小時和謝宇恆互換' },
+    { start: '10:00', end: '11:00', title: '攝影', detail: '鼓勵參加者拿手板拍照' }, LUNCH] },
+  { who: '謝宇恆', items: [
+    { start: '09:00', end: '10:00', title: '攝影', detail: '鼓勵參加者拿手板拍照；每 1 小時和張珈瀞互換' },
+    { start: '10:00', end: '11:00', title: '活動宣傳：招攬學生', detail: '' }, LUNCH] },
+  { who: '楊宜縈', items: [{ start: '09:00', end: '12:30', title: '關卡一：場控', detail: ST1 + '；協助沒手機的人代為報到、用平板參加' }] },
+  { who: '蔡依庭', items: [{ start: '11:00', end: '12:30', title: '關卡一：支援（同楊宜縈）', detail: ST1 + '；協助沒手機的人代為報到、用平板參加' }] },
+  { who: '林昱誠', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: ST1 }] },
+  { who: '潘氏雪幸', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: ST1 }] },
+  { who: '劉雅萍', items: [{ start: '09:00', end: '12:30', title: '關卡二：場控', detail: ST2 }] },
+  { who: '林柏瑋', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: ST2 }] },
+  { who: '武玉軍', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: ST2 + '；協助心理師翻譯' }] },
+  { who: '吳有城', items: [{ start: '09:00', end: '12:30', title: '關卡二：心理師', detail: COUNSEL }] },
+  { who: '郭貞宜', items: [{ start: '11:00', end: '12:30', title: '關卡二：心理師（接手）', detail: COUNSEL }] },
+  { who: '劉致遠', items: [{ start: '11:00', end: '12:30', title: '關卡二：心理師（接手）', detail: COUNSEL }] },
+  { who: '張瑞芸', items: [{ start: '09:00', end: '12:30', title: '關卡三：場控', detail: ST3 }] },
+  { who: '郭曉青', items: [{ start: '11:00', end: '12:30', title: '關卡三：支援（同張瑞芸）', detail: ST3 }] },
+  { who: '粘鎧森', items: [{ start: '09:00', end: '12:30', title: '關卡三：發放空氣鳳梨', detail: '發植物並說明照顧方式；200 份發完改送資源教室小物' }] },
+  { who: '詹芷安', items: [{ start: '09:00', end: '12:30', title: '機動支援', detail: '哪一關需要人手就去支援' }] },
 ];
 
 function getScheduleFor_(name) {
   const mine = [];
   SCHEDULE_ROLES.forEach(r => { if (name && name.indexOf(r.who) !== -1) Array.prototype.push.apply(mine, r.items); });
-  return { date: EVENT_DATE, all: SCHEDULE_ALL, mine: mine };
+  return { date: EVENT_DATE, pre: PRE_BRIEF, all: SCHEDULE_ALL, mine: mine };
 }
 
 // ============ 初始設定（在編輯器手動執行一次；重複執行沒有影響）============
@@ -157,6 +164,7 @@ function registerSelf_(body) {
   if (!name) return { ok: false, error: 'invalid_name' };
   if (!identity) return { ok: false, error: 'invalid_identity' };
   if (!age) return { ok: false, error: 'invalid_age' };
+  if (age === AGE.child) return { ok: false, error: 'child_staff' }; // 未滿 12 歲一律由工作人員代為報到
   if (!phone) return { ok: false, error: 'invalid_phone' };
 
   return withLock_(() => {
@@ -256,12 +264,15 @@ function completeActivity_(rawCode, survey) {
     if (found.values[COL.DONE - 1] === DONE_MARK) return { ok: true, status: 'already' };
 
     const isChild = ageKey_(found.values[COL.AGE - 1]) === 'child';
-    if (!isChild) {
+    // 12 歲以上必填問卷；兒童版也會送問卷（舊版網頁沒送時照樣完成）
+    if (survey || !isChild) {
       const answers = validateSurvey_(survey);
       if (!answers) return { ok: false, error: 'invalid_survey' };
-      getSheet_(SURVEY_SHEET_NAME).appendRow([
+      const sheet = getSheet_(SURVEY_SHEET_NAME);
+      ensureHeader_(sheet, SURVEY_HEADERS);
+      sheet.appendRow([
         now_('yyyy/MM/dd HH:mm:ss'), found.values[COL.IDENTITY - 1],
-        answers.gender, answers.q1, answers.q2, answers.q3, answers.q4,
+        answers.gender, answers.q1, answers.q2, answers.q3, answers.q4, found.values[COL.AGE - 1],
       ]);
     }
     getSheet_(REG_SHEET_NAME).getRange(found.row, COL.DONE, 1, 2).setValues([[DONE_MARK, now_('HH:mm')]]);
@@ -366,6 +377,36 @@ function staffConfirmPickup(pin, row) {
     sheet.getRange(row, COL.PICKED, 1, 3).setValues([[PICKED_MARK, time, staff]]);
     return { ok: true, pickedAt: time };
   });
+}
+
+/** 心理師關懷登記：用序號查，只回傳序號與姓名（不含手機、不含分數） */
+function staffCareLookup(pin, query) {
+  if (!getStaffName_(pin)) return { ok: false, error: 'auth' };
+  const code = normalizeCode_(query);
+  if (!code) return { ok: false, error: 'format' };
+  const found = findByCode_(code);
+  if (!found) return { ok: true, result: null };
+  return { ok: true, result: { row: found.row, code: code, name: String(found.values[COL.NAME - 1]), care: String(found.values[COL.CARE - 1] || '') } };
+}
+
+function staffCareMark(pin, row) {
+  const staff = getStaffName_(pin);
+  if (!staff) return { ok: false, error: 'auth' };
+  const sheet = getSheet_(REG_SHEET_NAME);
+  row = Number(row);
+  if (!(row >= 2 && row <= sheet.getLastRow() && row % 1 === 0)) return { ok: false, error: 'row' };
+  return withLock_(() => {
+    ensureHeader_(sheet, HEADERS);
+    const mark = CARE_MARK + '（' + now_('HH:mm') + ' ' + staff + '）';
+    sheet.getRange(row, COL.CARE).setValue(mark);
+    return { ok: true, care: mark };
+  });
+}
+
+/** 舊的工作表少了新欄位標題時補上 */
+function ensureHeader_(sheet, headers) {
+  const cell = sheet.getRange(1, headers.length);
+  if (!cell.getValue()) cell.setValue(headers[headers.length - 1]).setFontWeight('bold');
 }
 
 function toStaffView_(row, v) {
@@ -586,6 +627,7 @@ function getStaffPageHtml_() {
     <div class="tabs">
       <button class="tab on" data-tab="pickup">領取查詢</button>
       <button class="tab" data-tab="register">代為報到</button>
+      <button class="tab" data-tab="care">關懷登記</button>
     </div>
 
     <div id="pickupTab">
@@ -615,6 +657,15 @@ function getStaffPageHtml_() {
       <input id="rPhone" type="tel" inputmode="numeric" autocomplete="off" placeholder="09xxxxxxxx">
       <button class="primary full" id="registerBtn" style="margin-top:18px">送出代為報到</button>
       <div id="regOut"></div>
+    </div>
+
+    <div id="careTab" class="hidden">
+      <p class="hint" style="text-align:left;margin:0 0 12px">心理師用：輸入參加者序號，確認姓名是本人後，登記「需追蹤關懷」。系統只記錄註記，不存分數，也不顯示手機。</p>
+      <div class="row">
+        <input id="careInput" class="center" type="text" inputmode="numeric" autocomplete="off" placeholder="序號，例：12">
+        <button class="primary" id="careBtn">查詢</button>
+      </div>
+      <div id="careOut"></div>
     </div>
 
     <a class="guide" href="${GUIDE_URL}" target="_blank" rel="noopener">▶ 操作示範動畫</a>
@@ -684,6 +735,7 @@ function getStaffPageHtml_() {
       Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.toggle('on', x === t); });
       $('pickupTab').classList.toggle('hidden', t.dataset.tab !== 'pickup');
       $('registerTab').classList.toggle('hidden', t.dataset.tab !== 'register');
+      $('careTab').classList.toggle('hidden', t.dataset.tab !== 'care');
     };
   });
 
@@ -858,7 +910,7 @@ function getStaffPageHtml_() {
     var fresh = cur.filter(function (it) { return !seen[keyOf(it)]; });
     dot.textContent = fresh.length;
     dot.classList.toggle('hidden', !fresh.length);
-    if (fresh.length && !first) { bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring'); }
+    if (fresh.length && !first) { bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring'); chime(); }
     // 午餐時間跳出提示（每個人只跳一次）
     cur.forEach(function (it) {
       if (it.meal && !seen['toast' + keyOf(it)]) { seen['toast' + keyOf(it)] = 1; saveSeen(); toast('🍱 ' + it.start + ' 午餐時間到了！大家輪流吃便當喔'); }
@@ -904,6 +956,7 @@ function getStaffPageHtml_() {
     h.appendChild(x);
     sh.appendChild(h);
     var d = schedule.date.split('-');
+    if (schedule.pre) sh.appendChild(el('div', 'note', '📌 ' + schedule.pre));
     if (today() !== schedule.date) sh.appendChild(el('div', 'note', '活動日是 ' + Number(d[1]) + '/' + Number(d[2]) + '（六）。當天會自動標出「現在」的時段，換時段時小鈴鐺會響。'));
     sh.appendChild(el('h3', '', '✳ 我的工作（' + staffName + '）'));
     if (schedule.mine.length) schedule.mine.forEach(function (it) { sh.appendChild(tlItem(it)); });
@@ -914,6 +967,68 @@ function getStaffPageHtml_() {
     bg.onclick = function (e) { if (e.target === bg) bg.remove(); };
     document.body.appendChild(bg);
   }
+  // ---------- 關懷登記（心理師） ----------
+  function careSearch() {
+    var q = $('careInput').value.trim();
+    var box = $('careOut');
+    if (!q) return;
+    msg(box, '查詢中…', 'info');
+    call('staffCareLookup', [pin, q], function (r) {
+      if (!r.ok) { msg(box, '序號格式不對，請輸入數字（例：12）', 'error'); return; }
+      if (!r.result) { msg(box, '查無此序號，請再確認一次', 'error'); return; }
+      var x = r.result;
+      box.innerHTML = '';
+      var card = el('div', 'card');
+      kv(card, '序號', x.code, 'big');
+      kv(card, '姓名', x.name);
+      kv(card, '關懷註記', x.care || '（尚未登記）');
+      box.appendChild(card);
+      if (x.care) { box.appendChild(el('div', 'msg info', '這位已經登記過了，不用重複登記。')); return; }
+      box.appendChild(el('div', 'msg info', '請參加者說出姓名，確認是本人再登記。'));
+      var b = el('button', 'confirm full', '✓ 登記需追蹤關懷');
+      b.style.marginTop = '12px';
+      b.onclick = function () {
+        b.disabled = true;
+        call('staffCareMark', [pin, x.row], function (m) {
+          if (m.ok) { msg(box, '✓ ' + x.code + ' ' + x.name + ' 已登記：' + m.care, 'success'); $('careInput').value = ''; }
+          else { b.disabled = false; msg(box, '登記失敗，請再試一次', 'error'); }
+        }, box);
+      };
+      box.appendChild(b);
+    }, box);
+  }
+  $('careBtn').onclick = careSearch;
+  $('careInput').onkeydown = function (e) { if (e.key === 'Enter') careSearch(); };
+
+  // ---------- 提示音＋震動（網頁開著時；iPhone 不支援震動） ----------
+  var audioCtx = null;
+  function unlockAudio() {
+    try {
+      if (!audioCtx) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) audioCtx = new AC(); }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+  }
+  document.addEventListener('click', unlockAudio, { once: true });
+  document.addEventListener('touchstart', unlockAudio, { once: true });
+  function chime() {
+    try {
+      unlockAudio();
+      if (audioCtx) {
+        var t = audioCtx.currentTime;
+        [0, 0.28].forEach(function (d, i) {
+          var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+          o.type = 'sine'; o.frequency.value = i ? 1175 : 880;
+          g.gain.setValueAtTime(0.0001, t + d);
+          g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.25);
+          o.connect(g); g.connect(audioCtx.destination);
+          o.start(t + d); o.stop(t + d + 0.27);
+        });
+      }
+    } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate([250, 120, 250]); } catch (e) {}
+  }
+
   $('bellBtn').onclick = openSheet;
   $('nowBar').onclick = openSheet;
   setInterval(function () { if (pin) refreshReminders(false); }, 30000);
