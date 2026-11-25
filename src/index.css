@@ -100,3 +100,15 @@ header.sticky { border-bottom: 2px solid var(--ink) !important; }
 .zy-s { position: relative; display: block; }
 .zy-t { position: absolute; left: 100%; top: -.45em; margin-left: .05em; }
 .zy-n { display: block; line-height: .6; }
+
+/* 一律淺色：避免手機深色模式把輸入框變灰底、字看不清 */
+:root { color-scheme: light only; }
+input, textarea, select {
+  background-color: #fff;
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+}
+input::placeholder, textarea::placeholder { color: #8a97b3; -webkit-text-fill-color: #8a97b3; }
+
+/* 中文換行：盡量在標點後才斷行，不在詞中間切開 */
+body { word-break: keep-all; overflow-wrap: anywhere; }

@@ -80,7 +80,7 @@ const SCHEDULE_ROLES = [
   { who: '楊宜縈', items: [{ start: '09:00', end: '12:30', title: '關卡一：場控', detail: ST1 + '；協助沒手機的人代為報到、用平板參加' }] },
   { who: '蔡依庭', items: [{ start: '11:00', end: '12:30', title: '關卡一：支援（同楊宜縈）', detail: ST1 + '；協助沒手機的人代為報到、用平板參加' }] },
   { who: '林昱誠', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: ST1 }] },
-  { who: '潘氏雪幸', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: ST1 }] },
+  { who: '藩氏雪幸', items: [{ start: '09:00', end: '12:30', title: '關卡一：簽到', detail: ST1 }] },
   { who: '劉雅萍', items: [{ start: '09:00', end: '12:30', title: '關卡二：場控', detail: ST2 }] },
   { who: '林柏瑋', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: ST2 }] },
   { who: '武玉軍', items: [{ start: '09:00', end: '12:30', title: '關卡二：心情溫度計', detail: ST2 + '；協助心理師翻譯' }] },
@@ -524,13 +524,14 @@ function getStaffPageHtml_() {
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="color-scheme" content="light only">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@400;700&display=swap">
 <style>
   /* 海報風格：方格紙 × 鈷藍 × 橘，與活動網頁一致 */
-  :root { --ink: #1f3770; --blue: #2a5bd7; --blue-50: #eef4ff; --blue-100: #dbe7ff; --orange: #e5652a; --paper: #f5f8ff; --grid: #d6e2f7; }
+  :root { --ink: #1f3770; --blue: #2a5bd7; --blue-50: #eef4ff; --blue-100: #dbe7ff; --orange: #e5652a; --paper: #f5f8ff; --grid: #d6e2f7; color-scheme: light only; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Chiron GoRound TC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif; min-height: 100vh; padding: 20px 14px 40px; color: var(--ink);
+  body { font-family: 'Chiron GoRound TC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif; min-height: 100vh; padding: 20px 14px 40px; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere;
     background-color: var(--paper); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 22px 22px; }
   .container { background: #fff; border: 2px solid var(--ink); border-radius: 22px; box-shadow: 5px 5px 0 var(--ink); max-width: 480px; margin: 0 auto; padding: 22px 20px; position: relative; }
   .ribbon { display: block; width: fit-content; margin: 0 auto 8px; padding: 5px 26px; background: #fff; color: var(--orange); font-weight: 700; font-size: 13px;
@@ -543,7 +544,8 @@ function getStaffPageHtml_() {
   .tab { flex: 1; background: none; color: #5b6b8c; min-height: 42px; padding: 8px; font-size: 15px; box-shadow: none; border: none; }
   .tab.on { background: var(--blue); color: #fff; }
   .row { display: flex; gap: 10px; }
-  input { flex: 1; width: 100%; padding: 13px 14px; border: 2px solid var(--ink); border-radius: 12px; font-size: 17px; min-width: 0; font-family: inherit; color: var(--ink); }
+  input { flex: 1; width: 100%; padding: 13px 14px; border: 2px solid var(--ink); border-radius: 12px; font-size: 17px; min-width: 0; font-family: inherit; color: var(--ink); -webkit-text-fill-color: var(--ink); background: #fff; caret-color: var(--blue); }
+  input::placeholder { color: #8a97b3; -webkit-text-fill-color: #8a97b3; }
   input:focus { outline: 3px solid var(--blue-100); }
   .center { text-align: center; letter-spacing: 1px; }
   button { font-family: inherit; padding: 13px 18px; border: 2px solid var(--ink); border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; min-height: 50px; box-shadow: 3px 3px 0 var(--ink); transition: transform .1s, box-shadow .1s; color: var(--ink); background: #fff; }
