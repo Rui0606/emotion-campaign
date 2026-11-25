@@ -751,7 +751,7 @@ function getStaffPageHtml_() {
     '關卡一：場控': 'Cửa 1: Điều phối', '關卡一：支援（同楊宜縈）': 'Cửa 1: Hỗ trợ (cùng 楊宜縈)',
     '協助線上簽到，看到序號後協助抽情緒小卡；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
     '關卡二：場控': 'Cửa 2: Điều phối', '關卡二：心理師': 'Cửa 2: Chuyên viên tâm lý', '關卡二：心理師（接手）': 'Cửa 2: Chuyên viên tâm lý (thay ca)',
-    '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）': 'Tư vấn quan tâm người có điểm cao, nhập mã số vào mục "關懷登記" để ghi nhận; nói chuyện xong thì đưa mã thông quan (không muốn nói chuyện cũng đưa)',
+    '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）': 'Tư vấn quan tâm người có điểm cao, nhập mã số vào mục "關懷登記" để ghi nhận; nói chuyện xong thì đưa mã qua cửa (không muốn nói chuyện cũng đưa)',
     '關卡三：場控': 'Cửa 3: Điều phối', '關卡三：支援（同張瑞芸）': 'Cửa 3: Hỗ trợ (cùng 張瑞芸)', '關卡三：發放空氣鳳梨': 'Cửa 3: Phát cây không khí',
     '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙': 'Đối chiếu mã số và họ tên rồi xác nhận nhận quà; thu lại nhãn dán mã xác nhận của người được điểm danh hộ',
     '發植物並說明照顧方式；200 份發完改送資源教室小物': 'Phát cây và hướng dẫn cách chăm sóc; phát hết 200 cây thì đổi sang quà nhỏ của phòng tài nguyên',
