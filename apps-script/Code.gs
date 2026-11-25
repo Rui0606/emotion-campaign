@@ -764,7 +764,7 @@ function getStaffPageHtml_() {
     if (VI[t]) return VI[t];
     var bare = t.replace(/^(?:📌|⏰|🍱)\\s*/, '');
     if (VI[bare]) return VI[bare];
-    var m = /^現在 (\\S+)：(.+)$/.exec(t);
+    var m = /^現在 ([^：]+)：(.+)$/.exec(t);
     if (m) return 'Bây giờ ' + m[1] + (VI[m[2]] ? ': ' + VI[m[2]] : '');
     for (var i = 0; i < VI_RULES.length; i++) if (VI_RULES[i][0].test(t)) return t.replace(/[\\s\\S]*/, function () { var mm = VI_RULES[i][0].exec(t); return VI_RULES[i][1].replace(/\\$(\\d)/g, function (_, n) { return mm[n] || ''; }); });
     return '';
