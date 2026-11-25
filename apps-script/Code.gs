@@ -820,7 +820,7 @@ function getStaffPageHtml_() {
     $('out').appendChild(card);
 
     if (s.picked) { $('out').appendChild(el('div', 'msg error', '此人已領取，無法重複領取')); return; }
-    if (!s.done) { $('out').appendChild(el('div', 'msg error', '尚未完成活動（12歲以上需完成問卷；未滿12歲需完成小測驗），請參加者完成後再來領取')); }
+    if (!s.done) { $('out').appendChild(el('div', 'msg error', '尚未完成活動（12歲以上需完成問卷；未滿12歲需完成小測驗和回饋問卷），請參加者完成後再來領取')); }
     $('out').appendChild(el('div', 'msg info', '請參加者說出姓名，與上方姓名核對一致再確認'));
     var actions = el('div', 'actions');
     var ok = el('button', 'confirm', '✓ 確認領取');
@@ -875,7 +875,7 @@ function getStaffPageHtml_() {
       var cb = el('div', 'codebox');
       cb.appendChild(el('div', 'hint', form.name + '・' + (form.age === 'child' ? '未滿12歲（兒童版，不做心情溫度計）' : '12歲以上')));
       cb.appendChild(el('div', 'code', r.code));
-      cb.appendChild(el('div', 'hint', '請告訴參加者序號，在平板或家長手機選「我已經有序號」輸入' + (r.sms === true ? '（簡訊已發送）' : r.sms === false ? '（簡訊發送失敗）' : '')));
+      cb.appendChild(el('div', 'hint', '請告訴參加者序號，先用家長手機（沒有再用平板）選「我已經有序號」輸入' + (r.sms === true ? '（簡訊已發送）' : r.sms === false ? '（簡訊發送失敗）' : '')));
       box.appendChild(cb);
       $('rName').value = ''; $('rPhone').value = '';
       choice = { identity: '', age: '' };
