@@ -70,6 +70,8 @@ const ST2 = '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 �
 const COUNSEL = '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）';
 const ST3 = '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙';
 const LUNCH = { start: '11:00', end: '11:30', title: '拿便當', detail: '和另一位工讀生到校門口拿便當＋飲料，送到辦公室' };
+// 預設開啟越南文的帳號（外籍工作人員）
+const VI_STAFF = ['武玉軍', '藩氏雪幸'];
 const SCHEDULE_ROLES = [
   { who: '張珈瀞', items: [
     { start: '09:00', end: '10:00', title: '活動宣傳：招攬學生', detail: '每 1 小時和謝宇恆互換' },
@@ -520,6 +522,7 @@ function json_(obj) {
 
 function getStaffPageHtml_() {
   const identityButtons = IDENTITIES.map(v => '<button type="button" class="opt" data-group="identity" data-value="' + v + '">' + v + '</button>').join('');
+  const viStaffJson = JSON.stringify(VI_STAFF);
   return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -603,11 +606,19 @@ function getStaffPageHtml_() {
   .tl.past { opacity: .5; }
   .tl.meal .t::before { content: '🍱 '; }
   .note { font-size: 13px; color: #5b6b8c; background: #fff; border: 2px dashed var(--grid); border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
+  .virow { display: flex; justify-content: flex-end; margin: -8px -6px 6px 0; }
+  .vibtn { min-height: 34px; padding: 4px 10px; font-size: 13px; background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 999px; box-shadow: 2px 2px 0 var(--ink); }
+  .vibtn.on { background: var(--blue); color: #fff; }
+  [data-vi]::after { content: attr(data-vi); display: none; }
+  body.show-vi [data-vi]::after { display: block; font-size: .8em; font-weight: 400; color: #2a5bd7; line-height: 1.35; margin-top: 2px; white-space: normal; }
+  body.show-vi button[data-vi] { flex-direction: column; }
+  body.show-vi .tab.on[data-vi]::after, body.show-vi .primary[data-vi]::after, body.show-vi .confirm[data-vi]::after, body.show-vi .msg.success[data-vi]::after, body.show-vi .msg.error[data-vi]::after { color: inherit; opacity: .85; }
   .toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 60; background: var(--orange); color: #fff; font-weight: 700; padding: 12px 18px; border: 2px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); max-width: 92vw; text-align: center; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="container">
+  <div class="virow"><button type="button" class="vibtn" id="viBtn" aria-pressed="false">🇻🇳 Tiếng Việt</button></div>
   <span class="ribbon">✳ 115年修平特殊教育宣導</span>
   <h1>工作人員系統</h1>
   <p class="sub">「給情緒喘口氣」活動現場用</p>
@@ -684,10 +695,86 @@ function getStaffPageHtml_() {
   var choice = { identity: '', age: '' };
   var $ = function (id) { return document.getElementById(id); };
 
+  // ---------- 越南文（顯示在中文下方，按右上「Tiếng Việt」切換） ----------
+  var VI_STAFF = ${viStaffJson};
+  var VI = {
+    '個人密碼': 'Mật khẩu cá nhân', '登入': 'Đăng nhập', '登出': 'Đăng xuất',
+    '▶ 第一次用？看操作示範動畫': 'Lần đầu dùng? Xem video hướng dẫn', '▶ 操作示範動畫': 'Video hướng dẫn thao tác',
+    '領取查詢': 'Tra cứu nhận quà', '代為報到': 'Điểm danh hộ', '關懷登記': 'Ghi nhận quan tâm',
+    '用序號查': 'Tra bằng mã số', '忘記序號？用姓名查': 'Quên mã số? Tra bằng tên', '搜尋': 'Tìm', '查詢': 'Tra cứu',
+    '姓名': 'Họ tên', '身分': 'Thân phận', '年齡': 'Độ tuổi', '序號': 'Mã số', '手機': 'Điện thoại',
+    '身分／年齡': 'Thân phận / Độ tuổi', '報到方式': 'Cách điểm danh', '活動完成': 'Hoàn thành hoạt động', '領取狀態': 'Tình trạng nhận quà',
+    '校內職員/老師': 'Nhân viên / giáo viên', '學生': 'Sinh viên', '來賓': 'Khách',
+    '12歲以上': 'Từ 12 tuổi trở lên', '未滿12歲': 'Dưới 12 tuổi',
+    '網頁報到': 'Tự điểm danh trên web', '未完成': 'Chưa hoàn thành', '未領取': 'Chưa nhận',
+    '手機（選填，有填才會發簡訊）': 'Số điện thoại (không bắt buộc; có điền mới gửi tin nhắn)',
+    '送出代為報到': 'Gửi điểm danh hộ',
+    '心理師用：輸入參加者序號，確認姓名是本人後，登記「需追蹤關懷」。系統只記錄註記，不存分數，也不顯示手機。': 'Dành cho chuyên viên tâm lý: nhập mã số, xác nhận đúng người rồi ghi nhận "cần theo dõi quan tâm". Chỉ lưu ghi chú, không lưu điểm, không hiện số điện thoại.',
+    '密碼錯誤': 'Sai mật khẩu', '連線失敗，請再試一次': 'Kết nối thất bại, vui lòng thử lại',
+    '登入已失效，請重新登入': 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
+    '✓ 確認領取': 'Xác nhận nhận quà', '重新搜尋': 'Tìm lại',
+    '請參加者說出姓名，與上方姓名核對一致再確認': 'Mời người tham gia nói họ tên, đối chiếu với tên ở trên rồi mới xác nhận',
+    '尚未完成活動（12歲以上需完成問卷；未滿12歲需完成小測驗和回饋問卷），請參加者完成後再來領取': 'Chưa hoàn thành hoạt động (từ 12 tuổi phải điền phiếu khảo sát; dưới 12 tuổi phải làm câu đố và phiếu phản hồi). Mời làm xong rồi quay lại nhận quà.',
+    '此人已領取，無法重複領取': 'Người này đã nhận quà, không thể nhận lại', '尚未完成活動，無法領取': 'Chưa hoàn thành hoạt động, chưa thể nhận quà',
+    '更新失敗，請再試一次': 'Cập nhật thất bại, vui lòng thử lại',
+    '處理中…': 'Đang xử lý…', '搜尋中…': 'Đang tìm…', '查詢中…': 'Đang tra cứu…', '報到中…': 'Đang điểm danh…',
+    '請輸入姓名': 'Vui lòng nhập họ tên',
+    '序號格式不正確：請只輸入數字（例：1、001、120），或改用姓名查': 'Mã số không đúng: chỉ nhập số (ví dụ 1, 001, 120), hoặc tra bằng tên',
+    '查無此姓名，請確認字是否正確（可只輸入其中幾個字）': 'Không tìm thấy tên này, vui lòng kiểm tra lại (có thể chỉ nhập vài chữ)',
+    '查無此序號，請再確認數字，或改用「忘記序號？用姓名查」': 'Không tìm thấy mã số, vui lòng kiểm tra lại số hoặc tra bằng tên',
+    '請填寫姓名，並選擇身分與年齡': 'Vui lòng điền họ tên và chọn thân phận, độ tuổi',
+    '序號已全部發放完畢': 'Đã phát hết mã số', '系統忙碌，請再試一次': 'Hệ thống đang bận, vui lòng thử lại',
+    '未滿12歲（兒童版，不做心情溫度計）': 'Dưới 12 tuổi (bản thiếu nhi, không làm nhiệt kế cảm xúc)',
+    '請告訴參加者序號，先用家長手機（沒有再用平板）選「我已經有序號」輸入': 'Hãy cho người tham gia biết mã số; ưu tiên dùng điện thoại phụ huynh (không có thì dùng máy tính bảng), chọn "我已經有序號" rồi nhập',
+    '（簡訊已發送）': '(Đã gửi tin nhắn)', '（簡訊發送失敗）': '(Gửi tin nhắn thất bại)',
+    '序號格式不對，請輸入數字（例：12）': 'Mã số không đúng, vui lòng nhập số (ví dụ 12)', '查無此序號，請再確認一次': 'Không tìm thấy mã số này, vui lòng kiểm tra lại',
+    '關懷註記': 'Ghi chú quan tâm', '（尚未登記）': '(Chưa ghi nhận)',
+    '這位已經登記過了，不用重複登記。': 'Người này đã được ghi nhận, không cần ghi lại.',
+    '請參加者說出姓名，確認是本人再登記。': 'Mời người tham gia nói họ tên, xác nhận đúng người rồi mới ghi nhận.',
+    '✓ 登記需追蹤關懷': 'Ghi nhận cần theo dõi quan tâm', '登記失敗，請再試一次': 'Ghi nhận thất bại, vui lòng thử lại',
+    '🔔 今日提醒': 'Nhắc việc hôm nay', '關閉': 'Đóng', '✳ 全體時程': 'Lịch chung',
+    '沒有找到你的個人分工，請依照現場主控安排。': 'Không tìm thấy phân công của bạn, vui lòng làm theo sắp xếp của người điều phối.',
+    '場佈（全體）': 'Bố trí hiện trường (tất cả)', '活動進行': 'Hoạt động diễn ra', '午餐時間': 'Giờ ăn trưa', '收拾': 'Dọn dẹp',
+    '關卡一：簽到': 'Cửa 1: Điểm danh', '關卡二：心情溫度計': 'Cửa 2: Nhiệt kế cảm xúc',
+    '推車把備品運到微風廣場（植物、衛生紙、垃圾袋、簽到表、平板、筆電、延長線、膠帶）；張貼海報、擺植物；說明注意事項、測試': 'Dùng xe đẩy chở đồ đến quảng trường Vi Phong (cây, khăn giấy, túi rác, danh sách điểm danh, máy tính bảng, laptop, ổ cắm nối dài, băng keo); dán áp phích, bày cây; phổ biến lưu ý, chạy thử',
+    '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：回饋＋空氣鳳梨': 'Cửa 1: Điểm danh / Tìm hiểu rối loạn cảm xúc hành vi; Cửa 2: Nhiệt kế cảm xúc; Cửa 3: Phản hồi + nhận cây không khí',
+    '大家輪流吃便當，確認有人接手工作再去': 'Mọi người thay phiên ăn cơm hộp; có người thay ca rồi mới đi',
+    '清點物品後，用推車把備品運回資源教室': 'Kiểm đếm đồ dùng rồi dùng xe đẩy chở về phòng tài nguyên',
+    '協助線上簽到，看到序號後協助抽情緒小卡': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc',
+    '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý',
+    '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師；協助心理師翻譯': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý; hỗ trợ phiên dịch cho chuyên viên tâm lý',
+    '12/4（五）中午 行前說明': 'Trưa 12/4 (thứ Sáu): họp hướng dẫn trước hoạt động'
+  };
+  var VI_RULES = [
+    [/^序號只要輸入數字/, 'Chỉ cần nhập số, có thể bỏ số 0 và chữ SEM ở đầu: 1, 001, SEM001 đều là SEM001.'],
+    [/^輸入姓名或其中幾個字/, 'Nhập họ tên hoặc vài chữ trong tên. Nếu trùng tên, hãy đối chiếu thân phận và độ tuổi rồi chọn.'],
+    [/^✳ 我的工作/, 'Công việc của tôi'],
+    [/^活動日是/, 'Ngày hoạt động là 5/12 (thứ Bảy). Hôm đó hệ thống tự đánh dấu khung giờ hiện tại; đổi khung giờ thì chuông sẽ reo.'],
+    [/午餐時間到了/, 'Đến giờ ăn trưa! Mọi người thay phiên ăn cơm hộp nhé'],
+    [/^此人已於 (.+) 由 (.+) 確認領取/, 'Người này đã nhận quà lúc $1 (do $2 xác nhận), không thể nhận lại'],
+    [/領取成功（(.+)）/, 'Nhận quà thành công ($1)'],
+    [/^找到 (\\d+) 筆/, 'Tìm thấy $1 kết quả, hãy đối chiếu họ tên, thân phận và độ tuổi rồi chọn'],
+    [/^✓ 已完成 ?(.*)$/, 'Đã hoàn thành $1'], [/^✓ 已領取 ?(.*)$/, 'Đã nhận $1'],
+    [/已登記：/, 'Đã ghi nhận cần theo dõi quan tâm'],
+    [/^連線失敗/, 'Kết nối thất bại, vui lòng thử lại']
+  ];
+  function viOf(text) {
+    if (!text) return '';
+    var t = String(text);
+    if (VI[t]) return VI[t];
+    var bare = t.replace(/^(?:📌|⏰|🍱)\\s*/, '');
+    if (VI[bare]) return VI[bare];
+    var m = /^現在 (\\S+)：(.+)$/.exec(t);
+    if (m) return 'Bây giờ ' + m[1] + (VI[m[2]] ? ': ' + VI[m[2]] : '');
+    for (var i = 0; i < VI_RULES.length; i++) if (VI_RULES[i][0].test(t)) return t.replace(/[\\s\\S]*/, function () { var mm = VI_RULES[i][0].exec(t); return VI_RULES[i][1].replace(/\\$(\\d)/g, function (_, n) { return mm[n] || ''; }); });
+    return '';
+  }
+  function tagVi(n, text) { var v = viOf(text); if (v) n.setAttribute('data-vi', v); else n.removeAttribute('data-vi'); }
+  function V(zh) { var v = document.body.classList.contains('show-vi') ? viOf(zh) : ''; return v ? zh + '\\n' + v : zh; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = text;   // 一律用 textContent，避免插入惡意內容
+    if (text !== undefined) { n.textContent = text; tagVi(n, text); }   // 一律用 textContent，避免插入惡意內容
     return n;
   }
   function msg(box, text, type) {
@@ -697,7 +784,7 @@ function getStaffPageHtml_() {
   function call(fn, args, onOk, box) {
     var runner = google.script.run
       .withSuccessHandler(function (r) {
-        if (r && r.error === 'auth') { alert('登入已失效，請重新登入'); logout(); return; }
+        if (r && r.error === 'auth') { alert(V('登入已失效，請重新登入')); logout(); return; }
         onOk(r);
       })
       .withFailureHandler(function (err) { msg(box || $('out'), '連線失敗，請再試一次（' + (err && err.message) + '）', 'error'); });
@@ -722,9 +809,10 @@ function getStaffPageHtml_() {
         pin = value; staffName = r.name; schedule = r.schedule || null;
         sessionStorage.setItem('staffPin', pin); sessionStorage.setItem('staffName', staffName);
         sessionStorage.setItem('staffSchedule', JSON.stringify(schedule));
+        if (VI_STAFF.indexOf(staffName) !== -1 && localStorage.getItem('staffVi') === null) setVi(true);
         showMain();
-      } else { $('pinInput').value = ''; alert('密碼錯誤'); }
-    }).withFailureHandler(function () { $('loginBtn').disabled = false; alert('連線失敗，請再試一次'); }).staffLogin(value);
+      } else { $('pinInput').value = ''; alert(V('密碼錯誤')); }
+    }).withFailureHandler(function () { $('loginBtn').disabled = false; alert(V('連線失敗，請再試一次')); }).staffLogin(value);
   }
   function logout() {
     sessionStorage.removeItem('staffPin'); sessionStorage.removeItem('staffName'); sessionStorage.removeItem('staffSchedule');
@@ -754,7 +842,8 @@ function getStaffPageHtml_() {
     input.value = '';
     input.setAttribute('inputmode', mode === 'code' ? 'numeric' : 'text');
     input.placeholder = mode === 'code' ? '序號，例：1 或 001' : '參加者姓名';
-    $('searchHint').textContent = HINTS[mode];
+    $('searchHint').textContent = HINTS[mode]; tagVi($('searchHint'), HINTS[mode]);
+    setPlaceholders();
     $('out').innerHTML = '';
     input.focus();
   }
@@ -762,7 +851,7 @@ function getStaffPageHtml_() {
     b.onclick = function () { setMode(b.dataset.mode); };
   });
   $('searchHint').style.whiteSpace = 'pre-line';
-  $('searchHint').textContent = HINTS.code;
+  $('searchHint').textContent = HINTS.code; tagVi($('searchHint'), HINTS.code);
 
   function search() {
     var q = $('queryInput').value.trim();
@@ -1041,6 +1130,29 @@ function getStaffPageHtml_() {
   $('queryInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
   $('registerBtn').onclick = register;
   $('logoutBtn').onclick = logout;
+  // 越南文切換：記住選擇；外籍工作人員帳號第一次登入自動開啟
+  function setPlaceholders() {
+    var on = document.body.classList.contains('show-vi');
+    var ph = { pinInput: ['個人密碼', 'Mật khẩu'], careInput: ['序號，例：12', 'Mã số, ví dụ 12'], rPhone: ['09xxxxxxxx', '09xxxxxxxx'] };
+    ph.queryInput = searchMode === 'code' ? ['序號，例：1 或 001', 'Mã số, ví dụ 1'] : ['參加者姓名', 'Họ tên'];
+    Object.keys(ph).forEach(function (id) { $(id).placeholder = on && ph[id][1] !== ph[id][0] ? ph[id][0] + ' / ' + ph[id][1] : ph[id][0]; });
+  }
+  function setVi(on, save) {
+    document.body.classList.toggle('show-vi', on);
+    $('viBtn').classList.toggle('on', on);
+    $('viBtn').setAttribute('aria-pressed', on);
+    $('viBtn').textContent = on ? '🇻🇳 Tiếng Việt：開' : '🇻🇳 Tiếng Việt';
+    if (save) { try { localStorage.setItem('staffVi', on ? '1' : '0'); } catch (e) {} }
+    setPlaceholders();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('button, label, a.guide, #careTab .hint'), function (n) {
+    if (n.id === 'viBtn' || n.id === 'bellBtn') return;
+    tagVi(n, n.textContent.trim());
+  });
+  $('bellBtn').setAttribute('data-vi', 'Nhắc việc');
+  $('viBtn').onclick = function () { setVi(!document.body.classList.contains('show-vi'), true); };
+  var viSaved = null; try { viSaved = localStorage.getItem('staffVi'); } catch (e) {}
+  setVi(viSaved === '1' || (viSaved === null && VI_STAFF.indexOf(staffName) !== -1));
   if (pin && staffName) showMain();
 </script>
 </body>
