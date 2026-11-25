@@ -1508,7 +1508,7 @@ export default function App() {
             {pick(
               '對談結束後，請向心理師索取四位數通關密碼，以繼續完成活動。',
               'After the conversation, please ask the counselor for a 4-digit passcode to continue the activity.',
-              'Sau khi trò chuyện, vui lòng xin chuyên viên tư vấn mật mã 4 chữ số để tiếp tục hoạt động.'
+              'Sau khi trò chuyện, vui lòng xin chuyên viên tư vấn mã qua cửa 4 chữ số để tiếp tục hoạt động.'
             )}
           </label>
           <input
@@ -1517,7 +1517,7 @@ export default function App() {
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="off"
-            placeholder={pick('請輸入通關碼', 'Enter Passcode', 'Nhập mật mã')}
+            placeholder={pick('請輸入通關碼', 'Enter Passcode', 'Nhập mã qua cửa')}
             value={counselorCode}
             onChange={e => {
               setCounselorCode(e.target.value.replace(/\D/g, '').slice(0, 4));
@@ -1527,7 +1527,7 @@ export default function App() {
           />
           {codeError && (
             <p className="text-red-500 text-sm" role="alert">
-              {pick('密碼錯誤，請重新確認。', 'Incorrect passcode, please try again.', 'Mật mã sai, vui lòng kiểm tra lại.')}
+              {pick('密碼錯誤，請重新確認。', 'Incorrect passcode, please try again.', 'Mã qua cửa sai, vui lòng kiểm tra lại.')}
             </p>
           )}
           <button
