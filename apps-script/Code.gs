@@ -65,7 +65,7 @@ const SCHEDULE_ALL = [
   { start: '11:30', end: '12:30', title: '午餐時間', detail: '大家輪流吃便當，確認有人接手工作再去', meal: true },
   { start: '12:30', end: '13:00', title: '收拾', detail: '清點物品後，用推車把備品運回資源教室' },
 ];
-const ST1 = '協助線上簽到，看到序號後協助抽情緒小卡';
+const ST1 = '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二';
 const ST2 = '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師';
 const COUNSEL = '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）';
 const ST3 = '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙';
@@ -740,7 +740,7 @@ function getStaffPageHtml_() {
     '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：回饋＋空氣鳳梨': 'Cửa 1: Điểm danh / Tìm hiểu rối loạn cảm xúc hành vi; Cửa 2: Nhiệt kế cảm xúc; Cửa 3: Phản hồi + nhận cây không khí',
     '大家輪流吃便當，確認有人接手工作再去': 'Mọi người thay phiên ăn cơm hộp; có người thay ca rồi mới đi',
     '清點物品後，用推車把備品運回資源教室': 'Kiểm đếm đồ dùng rồi dùng xe đẩy chở về phòng tài nguyên',
-    '協助線上簽到，看到序號後協助抽情緒小卡': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc',
+    '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; xác nhận đã làm xong 5 câu tìm hiểu cảm xúc rồi mời sang Cửa 2',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師；協助心理師翻譯': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý; hỗ trợ phiên dịch cho chuyên viên tâm lý',
     '12/4（五）中午 行前說明': 'Trưa 12/4 (thứ Sáu): họp hướng dẫn trước hoạt động',
@@ -749,7 +749,7 @@ function getStaffPageHtml_() {
     '鼓勵參加者拿手板拍照；每 1 小時和張珈瀞互換': 'Khuyến khích người tham gia cầm bảng cầm tay chụp ảnh; mỗi 1 tiếng đổi việc với 張珈瀞',
     '拿便當': 'Lấy cơm hộp', '和另一位工讀生到校門口拿便當＋飲料，送到辦公室': 'Cùng một bạn làm thêm khác ra cổng trường lấy cơm hộp và đồ uống, mang về văn phòng',
     '關卡一：場控': 'Cửa 1: Điều phối', '關卡一：支援（同楊宜縈）': 'Cửa 1: Hỗ trợ (cùng 楊宜縈)',
-    '協助線上簽到，看到序號後協助抽情緒小卡；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
+    '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; xác nhận đã làm xong 5 câu tìm hiểu cảm xúc rồi mời sang Cửa 2; điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
     '關卡二：場控': 'Cửa 2: Điều phối', '關卡二：心理師': 'Cửa 2: Chuyên viên tâm lý', '關卡二：心理師（接手）': 'Cửa 2: Chuyên viên tâm lý (thay ca)',
     '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）': 'Tư vấn quan tâm người có điểm cao, nhập mã số vào mục "關懷登記" để ghi nhận; nói chuyện xong thì đưa mã qua cửa (không muốn nói chuyện cũng đưa)',
     '關卡三：場控': 'Cửa 3: Điều phối', '關卡三：支援（同張瑞芸）': 'Cửa 3: Hỗ trợ (cùng 張瑞芸)', '關卡三：發放空氣鳳梨': 'Cửa 3: Phát cây không khí',
