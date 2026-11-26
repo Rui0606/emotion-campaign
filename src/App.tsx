@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2, ClipboardList, Sprout, UserRoundPlus, Download } from 'lucide-react';
+import { Heart, CheckCircle2, ChevronRight, ArrowRight, ShieldCheck, Globe2, Brain, ListTree, HeartHandshake, EyeOff, Users, Lightbulb, RotateCcw, X, Phone, Lock, Ticket, Loader2, ClipboardList, Sprout, UserRoundPlus, Download, Eye, Hourglass } from 'lucide-react';
 import { Language, QuizQuestion } from './types';
-import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
+import { UI_TEXT, INTRO_CONTENT, QUIZ_INTRO, QUIZ_QUESTIONS, BSRS_QUESTIONS, BSRS_SUICIDE_QUESTION, BSRS_OPTIONS, HELP_LINES, SCHOOL_COUNSELING, CHECKIN_IDENTITIES, CHECKIN_GENDERS, CHECKIN_AGES, SURVEY, KIDS_INTRO, KIDS_QUIZ_INTRO, KIDS_QUIZ_QUESTIONS } from './data/content';
 import { playSound } from './utils/audio';
 import AirPlantArt from './components/AirPlantArt';
 import Zy from './components/Zhuyin';
@@ -35,6 +35,7 @@ type Step =
   | 'language' | 'checkin'
   | 'welcome' | 'quiz' | 'bsrs' | 'bsrs_result' | 'counselor' | 'survey'   // 12 歲以上
   | 'kids_welcome' | 'kids_quiz'                                             // 未滿 12 歲
+  | 'stage1_done'                                                           // 第一關完成（給工作人員看；兩版共用）
   | 'done';
 type ShuffledQuestion = { original: QuizQuestion; options: QuizQuestion['options'] };
 type SurveyDraft = { gender: string; q1: string; q2: number; q3: number; q4: string };
@@ -160,6 +161,7 @@ export default function App() {
   const [checkinMode, setCheckinMode] = useState<'register' | 'code'>(kiosk ? 'code' : 'register');
   const [checkinNameInput, setCheckinNameInput] = useState('');
   const [checkinIdentity, setCheckinIdentity] = useState('');
+  const [checkinGender, setCheckinGender] = useState('');
   const [checkinAge,setCheckinAge] = useState<AgeGroup | ''>('');
   const [checkinPhone, setCheckinPhone] = useState('');
   const [checkinCodeInput, setCheckinCodeInput] = useState('');
@@ -200,6 +202,7 @@ export default function App() {
     if (!hasCheckin) return 'checkin';
     if (completed) return 'done';
     if (isChild && step === 'survey') return kidsShowResults ? 'survey' : 'kids_quiz';
+    if (step === 'stage1_done') return isChild ? (kidsShowResults ? step : 'kids_quiz') : (quizPassed ? step : 'quiz');
     if (isChild && ADULT_STEPS.includes(step)) return 'kids_welcome';
     if (!isChild && KIDS_STEPS.includes(step)) return 'welcome';
     switch (step) {
@@ -306,6 +309,21 @@ export default function App() {
     window.history.pushState({ step: next }, '');
   };
 
+  // 第一關完成畫面：按鈕倒數 5 秒才出現，讓參加者先把畫面給工作人員看（重新整理後重新倒數）
+  const STAGE1_WAIT = 5;
+  const [stage1Count, setStage1Count] = useState(STAGE1_WAIT);
+  useEffect(() => {
+    if (currentStep !== 'stage1_done') return;
+    setStage1Count(STAGE1_WAIT);
+    const timer = window.setInterval(() => {
+      setStage1Count(n => {
+        if (n <= 1) { window.clearInterval(timer); return 0; }
+        return n - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [currentStep]);
+
   const handleSelectLanguage = (selectedLang: Language) => {
     setLang(selectedLang);
     goTo(hasCheckin ? startStep() : 'checkin');
@@ -349,7 +367,7 @@ export default function App() {
     e.preventDefault();
     if (checkinBusy) return;
     const phone = normalizePhone(checkinPhone);
-    if (!checkinNameInput.trim() || !checkinIdentity || !checkinAge) {
+    if (!checkinNameInput.trim() || !checkinIdentity || !checkinGender || !checkinAge) {
       setCheckinError('form');
       return;
     }
@@ -363,7 +381,7 @@ export default function App() {
     }
     setCheckinBusy(true);
     setCheckinError(null);
-    const result = await registerCheckin(checkinNameInput.trim(), checkinIdentity, checkinAge, phone);
+    const result = await registerCheckin(checkinNameInput.trim(), checkinIdentity, checkinGender, checkinAge, phone);
     setCheckinBusy(false);
     if (result.ok) {
       playSound('success');
@@ -418,6 +436,7 @@ export default function App() {
     setCheckinMode(kiosk ? 'code' : 'register');
     setCheckinNameInput('');
     setCheckinIdentity('');
+    setCheckinGender('');
     setCheckinAge('');
     setCheckinPhone('');
     setCheckinCodeInput('');
@@ -466,7 +485,7 @@ export default function App() {
 
   const handleSurveySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const missing = !survey.gender ? 'sv-gender' : !survey.q1 ? 'sv-q1' : !survey.q2 ? 'sv-q2' : !survey.q3 ? 'sv-q3' : '';
+    const missing = !survey.q1 ? 'sv-q1' : !survey.q2 ? 'sv-q2' : !survey.q3 ? 'sv-q3' : '';
     if (missing) {
       setSurveyError(true);
       scrollToElement(missing, 100);
@@ -619,11 +638,12 @@ export default function App() {
       survey: pick('最後一步：活動問卷', 'Final Step: Survey', 'Bước cuối: Khảo sát'),
       kids_welcome: '準備開始',
       kids_quiz: '認識情緒',
+      stage1_done: pick('第一關完成', 'Step 1 done', 'Xong chặng 1'),
       done: pick('完成！', 'Done!', 'Hoàn thành!'),
     };
     const progress: Record<Exclude<Step, 'language'>, string> = {
       checkin: '5%', welcome: '10%', quiz: '30%', bsrs: '50%', bsrs_result: '65%', counselor: '75%', survey: '85%',
-      kids_welcome: '15%', kids_quiz: '55%', done: '100%',
+      kids_welcome: '15%', kids_quiz: '55%', stage1_done: isChild ? '65%' : '40%', done: '100%',
     };
     const step = currentStep as Exclude<Step, 'language'>;
     return (
@@ -639,7 +659,7 @@ export default function App() {
             <span className="font-bold text-teal-800 text-sm">{pick('回首頁', 'Home', 'Trang chủ')}</span>
           </button>
 
-          {step === 'kids_welcome' || step === 'kids_quiz' || (isChild && step === 'survey') ? (
+          {step === 'kids_welcome' || step === 'kids_quiz' || (isChild && (step === 'survey' || step === 'stage1_done')) ? (
             <button
               type="button"
               onClick={() => setZhuyinOn(v => !v)}
@@ -721,8 +741,9 @@ export default function App() {
       case 'form':
       case 'invalid_name':
       case 'invalid_identity':
+      case 'invalid_gender':
       case 'invalid_age':
-        return pick('請填寫姓名，並選擇身分與年齡。', 'Please enter your name and choose your role and age group.', 'Vui lòng nhập họ tên, chọn đối tượng và nhóm tuổi.');
+        return pick('請填寫姓名，並選擇身分、性別與年齡。', 'Please enter your name and choose your role, gender and age group.', 'Vui lòng nhập họ tên, chọn đối tượng, giới tính và nhóm tuổi.');
       case 'invalid_phone':
         return pick('請輸入正確的手機號碼（09 開頭共 10 碼）。', 'Please enter a valid Taiwan mobile number (10 digits starting with 09).', 'Vui lòng nhập số điện thoại di động Đài Loan hợp lệ (10 số, bắt đầu bằng 09).');
       case 'phone_taken':
@@ -866,6 +887,22 @@ export default function App() {
             </fieldset>
 
             <fieldset className="space-y-2">
+              <legend className="block text-sm font-semibold text-gray-800 mb-2">{pick('性別', 'Gender', 'Giới tính')}</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {CHECKIN_GENDERS.map(opt => (
+                  <label key={opt.value} className={choiceCls(checkinGender === opt.value)}>
+                    <input
+                      type="radio" name="ci-gender" value={opt.value} className="sr-only"
+                      checked={checkinGender === opt.value}
+                      onChange={() => { setCheckinGender(opt.value); setCheckinError(null); }}
+                    />
+                    {opt.label[lang]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="space-y-2">
               <legend className="block text-sm font-semibold text-gray-800 mb-2">{pick('年齡', 'Age', 'Độ tuổi')}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {CHECKIN_AGES.map(opt => (
@@ -913,9 +950,9 @@ export default function App() {
 
             <p className="text-[11px] text-gray-400 leading-relaxed">
               {pick(
-                '個資告知：修平科技大學學生發展中心蒐集你的姓名、身分、年齡組別與手機號碼，僅用於本次活動報到、發送序號簡訊及領取核對，不作其他用途。',
-                'Privacy notice: HUST Student Development Center collects your name, role, age group and mobile number only for event check-in, sending your code by SMS and verifying gift pickup, and for no other purpose.',
-                'Thông báo bảo mật: Trung tâm Phát triển Sinh viên HUST thu thập họ tên, đối tượng, nhóm tuổi và số điện thoại của bạn chỉ để điểm danh, gửi mã số qua SMS và xác nhận nhận quà, không dùng cho mục đích khác.'
+                '個資告知：修平科技大學學生發展中心蒐集你的姓名、身分、性別、年齡組別與手機號碼，僅用於本次活動報到、發送序號簡訊及領取核對，不作其他用途。',
+                'Privacy notice: HUST Student Development Center collects your name, role, gender, age group and mobile number only for event check-in, sending your code by SMS and verifying gift pickup, and for no other purpose.',
+                'Thông báo bảo mật: Trung tâm Phát triển Sinh viên HUST thu thập họ tên, đối tượng, giới tính, nhóm tuổi và số điện thoại của bạn chỉ để điểm danh, gửi mã số qua SMS và xác nhận nhận quà, không dùng cho mục đích khác.'
               )}
             </p>
           </form>
@@ -1126,14 +1163,70 @@ export default function App() {
         </button>
       ) : (
         <button
-          onClick={() => goTo('survey')}
+          onClick={() => goTo('stage1_done')}
           className={`${primaryBtn} sticky bottom-6 shadow-lg shadow-teal-900/20 z-10`}
         >
-          <Zy text="下一步：填回饋問卷" on={zhuyinOn} /> <ChevronRight className="w-5 h-5" />
+          <Zy text="完成第一關" on={zhuyinOn} /> <ChevronRight className="w-5 h-5" />
         </button>
       )}
     </motion.div>
   );
+
+  // 第一關完成：給第一關工作人員看；12 歲以上接著到第二關，兒童直接到第 3 關
+  const renderStage1Done = () => {
+    const kid = isChild;
+    const ready = stage1Count <= 0;
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+        className="max-w-md mx-auto px-6 pb-6"
+      >
+        <div className="bg-white rounded-3xl p-7 text-center space-y-5 border border-white">
+          <div className="mx-auto w-28 h-28 rounded-full bg-green-600 text-white flex items-center justify-center border-2 border-[#1f3770]">
+            <CheckCircle2 className="w-16 h-16" strokeWidth={2.5} />
+          </div>
+          <div className="space-y-1">
+            <h2 className={`${kid && zhuyinOn ? 'text-3xl' : 'text-4xl'} font-black !text-green-700 tracking-wide`}>
+              {kid ? <Zy text="第一關完成" on={zhuyinOn} /> : pick('第一關完成', 'Step 1 complete', 'Hoàn thành chặng 1')}
+            </h2>
+            {checkinName && <p className="text-xl font-bold text-teal-900">{checkinName}</p>}
+          </div>
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl text-[15px] font-medium leading-relaxed text-left flex gap-2.5">
+            <Eye className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              {kid ? (
+                <>
+                  <p><Zy text="請把這個畫面給第一關工作人員看。" on={zhuyinOn} /></p>
+                  <p><Zy text="接著到第 3 關填回饋問卷，就可以領空氣鳳梨。" on={zhuyinOn} /></p>
+                </>
+              ) : (
+                <>
+                  <p>{pick('請把這個畫面給第一關工作人員看。', 'Please show this screen to the Step 1 staff.', 'Vui lòng đưa màn hình này cho nhân viên Chặng 1 xem.')}</p>
+                  <p>{pick('工作人員說可以，再按下一步。', 'Tap next when the staff says OK.', 'Khi nhân viên đồng ý, hãy bấm tiếp.')}</p>
+                </>
+              )}
+            </div>
+          </div>
+          {ready ? (
+            <button onClick={() => goTo(kid ? 'survey' : 'bsrs')} className={primaryBtn}>
+              {kid
+                ? <Zy text="前往第 3 關" on={zhuyinOn} />
+                : pick('前往第二關：心情溫度計', 'Go to Step 2: Emotion Thermometer', 'Sang chặng 2: Nhiệt kế cảm xúc')}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="w-full border-2 border-dashed border-gray-300 text-gray-500 font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-2" aria-live="polite">
+              <Hourglass className="w-5 h-5" />
+              {stage1Count}{' '}
+              {kid
+                ? <Zy text="秒後可前往第 3 關" on={zhuyinOn} />
+                : pick('秒後可前往第二關', 's until Step 2', 'giây nữa sang chặng 2')}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
 
   const renderQuiz = () => (
     <motion.div
@@ -1252,7 +1345,7 @@ export default function App() {
         </button>
       ) : quizPassed ? (
         <button
-          onClick={() => goTo('bsrs')}
+          onClick={() => goTo('stage1_done')}
           className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-colors sticky bottom-6 shadow-lg shadow-gray-900/20 z-10"
         >
           {UI_TEXT.nextStep[lang]} <ChevronRight className="w-5 h-5" />
@@ -1714,7 +1807,6 @@ export default function App() {
         )}
 
         <form onSubmit={handleSurveySubmit} className="space-y-5" noValidate>
-          {choice('gender', 'sv-gender', SURVEY.gender.question[lang], SURVEY.gender.options.map(o => ({ value: o.value, label: o.label })))}
           {choice('q1', 'sv-q1', SURVEY.q1.question[lang], SURVEY.q1.options.map(o => ({ value: o.value, label: o.label })))}
           {scale('q2', 'sv-q2', SURVEY.q2[lang])}
           {scale('q3', 'sv-q3', SURVEY.q3[lang])}
@@ -1818,6 +1910,7 @@ export default function App() {
     survey: renderSurvey,
     kids_welcome: renderKidsWelcome,
     kids_quiz: renderKidsQuiz,
+    stage1_done: renderStage1Done,
     done: renderDone,
   };
 

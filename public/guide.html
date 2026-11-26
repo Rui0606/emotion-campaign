@@ -181,6 +181,7 @@
         '<div class="tabs"><div class="on">我要報到</div><div>我已經有序號</div></div>' +
         '<div class="lbl">姓名</div>' + inp('name', st, '請輸入姓名') +
         '<div class="lbl">身分</div><div class="opts">' + opt('id-t', '職員/老師', st) + opt('id-s', '學生', st) + opt('id-g', '來賓', st) + '</div>' +
+        '<div class="lbl">性別</div><div class="opts">' + opt('sex-m', '生理男性', st) + opt('sex-f', '生理女性', st) + '</div>' +
         '<div class="lbl">年齡</div><div class="opts">' + opt('age-a', '12歲以上', st) + opt('age-c', '未滿12歲', st) + '</div>' +
         '<div class="lbl">手機</div>' + inp('phone', st, '09xxxxxxxx') +
         '</div><div class="btn" data-k="submit">送出報到</div></div>';
@@ -200,11 +201,11 @@
         '<div class="tabs"><div class="on">領取查詢</div><div data-k="tab-reg">代為報到</div><div data-k="tab-care">關懷登記</div></div>' +
         '<div class="opts">' + opt('m-code', '用序號查', { on: [st.byName ? '' : 'm-code'] }) + opt('m-name', '忘記序號？用姓名查', { on: [st.byName ? 'm-name' : ''] }) + '</div>' +
         '<div style="display:flex;gap:5px"><div style="flex:1">' + inp('q', st, st.byName ? '參加者姓名' : '序號，例：1 或 001') + '</div><div class="btn" data-k="search" style="padding:5px 10px">搜尋</div></div>';
-      if (st.list) h += '<div class="msg i">找到 2 筆，請核對身分與年齡後選擇：</div><div class="card" data-k="pick1" style="padding:6px"><b>王小明（學生・12歲以上）</b><div class="hint" style="text-align:left">SEM012・已完成</div></div><div class="card" style="padding:6px"><b>王小明（來賓・12歲以上）</b><div class="hint" style="text-align:left">SEM087・未完成</div></div>';
+      if (st.list) h += '<div class="msg i">找到 2 筆，請核對身分與年齡後選擇：</div><div class="card" data-k="pick1" style="padding:6px"><b>王小明（學生・生理男性・12歲以上）</b><div class="hint" style="text-align:left">SEM012・已完成</div></div><div class="card" style="padding:6px"><b>王小明（來賓・生理男性・12歲以上）</b><div class="hint" style="text-align:left">SEM087・未完成</div></div>';
       if (st.card) {
         var done = st.card !== 'notdone', picked = st.card === 'picked';
         h += '<div class="card"><div class="kv"><span>序號</span><span style="color:#2a5bd7">SEM012</span></div><div class="kv"><span>姓名</span><span>王小明</span></div>' +
-          '<div class="kv"><span>身分／年齡</span><span>學生・12歲以上</span></div>' +
+          '<div class="kv"><span>身分／性別／年齡</span><span>學生・生理男性・12歲以上</span></div>' +
           '<div class="kv"><span>活動完成</span><span class="tag ' + (done ? 'y">✓ 已完成' : 'n">未完成') + '</span></div>' +
           '<div class="kv"><span>領取狀態</span><span class="tag ' + (picked ? 'y">✓ 已領取 10:30 瑞芸' : 'n">未領取') + '</span></div></div>';
         if (picked) h += '<div class="msg e">此人已領取，無法重複領取</div>';
@@ -226,6 +227,7 @@
       }
       return h + '<div class="card"><div class="lbl">姓名</div>' + inp('rname', st, '') +
         '<div class="lbl">身分</div><div class="opts">' + opt('ri-t', '職員/老師', st) + opt('ri-s', '學生', st) + opt('ri-g', '來賓', st) + '</div>' +
+        '<div class="lbl">性別</div><div class="opts">' + opt('rx-m', '生理男性', st) + opt('rx-f', '生理女性', st) + '</div>' +
         '<div class="lbl">年齡</div><div class="opts">' + opt('ra-a', '12歲以上', st) + opt('ra-c', '未滿12歲', st) + '</div>' +
         '<div class="lbl">手機（選填，有填才會發簡訊）</div>' + inp('rphone', st, '09xxxxxxxx') +
         '</div><div class="btn" data-k="rsubmit">送出代為報到</div></div>';
@@ -261,11 +263,11 @@
       who: '參加者用自己的手機報到，你看畫面確認後放行。序號會用簡訊寄給他，不用另外寫貼紙。', whoVi: 'Người tham gia tự điểm danh bằng điện thoại của mình. Bạn xem màn hình để xác nhận rồi cho đi tiếp. Mã số đã được gửi qua tin nhắn nên không cần phát nhãn dán.',
       steps: [
         { s: 'lang', st: {}, act: [{ tap: 'zh' }], zh: '請參加者用手機掃海報上的 QR code，打開活動網頁，選語言。', vi: 'Mời người tham gia quét mã QR trên áp phích để mở trang web, rồi chọn ngôn ngữ.' },
-        { s: 'reg', st: {}, act: [{ type: ['name', '王小明'] }, { tap: 'id-s' }, { tap: 'age-a' }, { type: ['phone', '0912345678'] }], zh: '參加者自己填姓名、選身分和年齡、輸入手機。未滿12歲不能自己報到，請帶到「協助報到」。', vi: 'Người tham gia tự điền họ tên, chọn thân phận và độ tuổi, nhập số điện thoại. Trẻ dưới 12 tuổi không tự điểm danh được, hãy dẫn đến "Điểm danh hộ".' },
-        { s: 'reg', st: { vals: { name: '王小明', phone: '0912345678' }, on: ['id-s', 'age-a'] }, act: [{ tap: 'submit' }], zh: '按「送出報到」。', vi: 'Bấm "送出報到" (Gửi điểm danh).' },
+        { s: 'reg', st: {}, act: [{ type: ['name', '王小明'] }, { tap: 'id-s' }, { tap: 'sex-m' }, { tap: 'age-a' }, { type: ['phone', '0912345678'] }], zh: '參加者自己填姓名、選身分、性別和年齡、輸入手機。未滿12歲不能自己報到，請帶到「協助報到」。', vi: 'Người tham gia tự điền họ tên, chọn thân phận, giới tính và độ tuổi, nhập số điện thoại. Trẻ dưới 12 tuổi không tự điểm danh được, hãy dẫn đến "Điểm danh hộ".' },
+        { s: 'reg', st: { vals: { name: '王小明', phone: '0912345678' }, on: ['id-s', 'sex-m', 'age-a'] }, act: [{ tap: 'submit' }], zh: '按「送出報到」。', vi: 'Bấm "送出報到" (Gửi điểm danh).' },
         { s: 'checked', st: {}, act: [], zh: '畫面出現「✓ 已報到」和序號，就是報到成功。請參加者把這個畫面給你看。', vi: 'Màn hình hiện "✓ 已報到" (Đã điểm danh) và mã số là thành công. Mời người tham gia cho bạn xem màn hình này.' },
         { s: 'checked', st: {}, act: [{ real: '<div style="font-size:34px">✅ 🃏</div><b>確認畫面 → 抽情緒小卡 → 放行</b><div class="hint">有手機的人會收到序號簡訊<br>不用發驗證碼貼紙</div>' }], zh: '你確認畫面有「✓ 已報到」和序號，就請參加者抽一張情緒小卡，然後放行。序號已經用簡訊寄給他，不用另外寫貼紙。', vi: 'Khi thấy màn hình có "✓ 已報到" và mã số, mời người tham gia rút một thẻ cảm xúc rồi cho đi tiếp. Mã số đã được gửi qua tin nhắn, không cần phát nhãn dán.' },
-        { s: 'checked', st: {}, act: [{ tap: 'start' }, { real: '<div style="font-size:30px">➡️</div><b>12歲以上：關卡一 → 關卡二 → 問卷</b><b>未滿12歲：兒童版小測驗 → 回饋問卷</b><div class="hint">系統會依年齡自動分流</div>' }], zh: '請參加者按「開始活動」，帶他到關卡一。系統會依年齡自動分流。', vi: 'Mời người tham gia bấm "開始活動" (Bắt đầu) và dẫn đến cửa 1. Hệ thống tự chia theo độ tuổi.' }
+        { s: 'checked', st: {}, act: [{ tap: 'start' }, { real: '<div style="font-size:30px">➡️</div><b>12歲以上：關卡一 → 第一關完成 → 關卡二 → 第 3 關問卷</b><b>未滿12歲：兒童版小測驗 → 第一關完成 → 第 3 關回饋問卷</b><div class="hint">系統會依年齡自動分流</div>' }], zh: '請參加者按「開始活動」，帶他到關卡一。系統會依年齡自動分流。', vi: 'Mời người tham gia bấm "開始活動" (Bắt đầu) và dẫn đến cửa 1. Hệ thống tự chia theo độ tuổi.' }
       ],
       faq: [
         { q: '參加者說沒收到簡訊？', a: '沒關係，以手機畫面上的序號為準。簡訊只是備份，晚一點才收到也正常。', qv: 'Người tham gia nói chưa nhận được tin nhắn?', av: 'Không sao, lấy mã số trên màn hình làm chuẩn. Tin nhắn chỉ là bản sao lưu, đến muộn cũng bình thường.' },
@@ -281,8 +283,8 @@
       steps: [
         { s: 'login', st: {}, act: [{ type: ['pin', '••••'] }, { tap: 'login' }], zh: '用你的手機打開「工作人員系統」網址，輸入你的個人密碼，按登入。', vi: 'Mở đường dẫn "Hệ thống nhân viên" trên điện thoại của bạn, nhập mật khẩu cá nhân rồi bấm đăng nhập.' },
         { s: 'pickup', st: { staff: '昱誠' }, act: [{ tap: 'tab-reg' }], zh: '登入後點上方的「代為報到」。', vi: 'Sau khi đăng nhập, bấm "代為報到" (Điểm danh hộ) ở phía trên.' },
-        { s: 'proxy', st: {}, act: [{ type: ['rname', '陳阿姨'] }, { tap: 'ri-g' }, { tap: 'ra-a' }], zh: '問參加者姓名，幫他選身分和年齡。', vi: 'Hỏi họ tên người tham gia, chọn thân phận và độ tuổi giúp họ.' },
-        { s: 'proxy', st: { vals: { rname: '陳阿姨' }, on: ['ri-g', 'ra-a'] }, act: [{ tap: 'rsubmit' }], zh: '手機可以不填，有填才會收到簡訊。按「送出代為報到」。', vi: 'Số điện thoại có thể bỏ trống; có điền mới nhận được tin nhắn. Bấm "送出代為報到" (Gửi).' },
+        { s: 'proxy', st: {}, act: [{ type: ['rname', '陳阿姨'] }, { tap: 'ri-g' }, { tap: 'rx-f' }, { tap: 'ra-a' }], zh: '問參加者姓名，幫他選身分、性別和年齡。', vi: 'Hỏi họ tên người tham gia, chọn thân phận, giới tính và độ tuổi giúp họ.' },
+        { s: 'proxy', st: { vals: { rname: '陳阿姨' }, on: ['ri-g', 'rx-f', 'ra-a'] }, act: [{ tap: 'rsubmit' }], zh: '手機可以不填，有填才會收到簡訊。按「送出代為報到」。', vi: 'Số điện thoại có thể bỏ trống; có điền mới nhận được tin nhắn. Bấm "送出代為報到" (Gửi).' },
         { s: 'proxy', st: { code: true }, act: [], zh: '畫面出現大大的序號。', vi: 'Màn hình hiện mã số lớn.' },
         { s: 'proxy', st: { code: true }, act: [{ real: '<div class="sticker"><b>序號</b><span style="font-size:22px;font-weight:800">SEM101</span></div><b>把序號寫在驗證碼貼紙，交給參加者</b><div class="hint">請他保管好，最後領取時要用</div>' }], zh: '把序號寫在驗證碼貼紙交給參加者，提醒他收好，最後領空氣鳳梨時要用。', vi: 'Viết mã số lên nhãn dán mã xác nhận đưa cho người tham gia, nhắc họ giữ kỹ vì cuối cùng nhận cây cần dùng.' },
         { s: 'kiosk', st: {}, act: [{ type: ['code', '101'] }, { tap: 'go' }], zh: '請參加者先用家長的手機（沒有手機再用共用平板），選「我已經有序號」，輸入序號數字 101，按繼續。', vi: 'Ưu tiên dùng điện thoại của phụ huynh (không có thì dùng máy tính bảng dùng chung), chọn "我已經有序號" (Tôi đã có mã số), nhập số 101 rồi bấm tiếp tục.' },

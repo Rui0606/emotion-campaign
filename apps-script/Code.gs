@@ -34,6 +34,7 @@ const SMS_TEMPLATE = `【修平科大 - 特殊教育宣導-給情緒喘口氣】
 請勿轉發此訊息`;
 
 const IDENTITIES = ['校內職員/老師', '學生', '來賓'];
+const GENDERS = ['生理男性', '生理女性']; // 報到時填；回饋問卷的性別由報到名單帶入
 const AGE = { adult: '12歲以上', child: '未滿12歲' };
 const METHOD = { self: '網頁報到', staff: '代為報到' };
 const DONE_MARK = '已完成';
@@ -43,9 +44,10 @@ const PICKED_MARK = '已領';
 const COL = {
   CODE: 1, TIME: 2, NAME: 3, IDENTITY: 4, AGE: 5, PHONE: 6, METHOD: 7, REG_BY: 8,
   SMS: 9, DONE: 10, DONE_AT: 11, PICKED: 12, PICKED_AT: 13, PICKED_BY: 14, CARE: 15,
+  GENDER: 16, // 新增欄位放最後，既有欄位順序不變
 };
 const HEADERS = ['序號', '報到時間', '姓名', '身分', '年齡組別', '手機', '報到方式', '代報經辦人',
-  '簡訊狀態', '完成狀態', '完成時間', '領取狀態', '領取時間', '領取經辦人', '關懷註記'];
+  '簡訊狀態', '完成狀態', '完成時間', '領取狀態', '領取時間', '領取經辦人', '關懷註記', '性別'];
 const CARE_MARK = '需追蹤關懷';
 
 // 問卷（匿名：不記錄姓名、手機、序號）
@@ -65,7 +67,7 @@ const SCHEDULE_ALL = [
   { start: '11:30', end: '12:30', title: '午餐時間', detail: '大家輪流吃便當，確認有人接手工作再去', meal: true },
   { start: '12:30', end: '13:00', title: '收拾', detail: '清點物品後，用推車把備品運回資源教室' },
 ];
-const ST1 = '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二';
+const ST1 = '協助線上簽到，看到序號後協助抽情緒小卡；看到「第一關完成」畫面再請他到關卡二（兒童直接到第 3 關）';
 const ST2 = '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師';
 const COUNSEL = '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）';
 const ST3 = '核對序號與姓名後確認領取；回收代為報到者的驗證碼貼紙';
@@ -161,10 +163,12 @@ function doPost(e) {
 function registerSelf_(body) {
   const name = cleanText_(body.name, 40);
   const identity = IDENTITIES.indexOf(body.identity) !== -1 ? body.identity : '';
+  const gender = GENDERS.indexOf(body.gender) !== -1 ? body.gender : '';
   const age = AGE[body.age];
   const phone = normalizePhone_(body.phone);
   if (!name) return { ok: false, error: 'invalid_name' };
   if (!identity) return { ok: false, error: 'invalid_identity' };
+  if (body.gender && !gender) return { ok: false, error: 'invalid_gender' }; // 舊版網頁沒送性別時照樣可報到
   if (!age) return { ok: false, error: 'invalid_age' };
   if (age === AGE.child) return { ok: false, error: 'child_staff' }; // 未滿 12 歲一律由工作人員代為報到
   if (!phone) return { ok: false, error: 'invalid_phone' };
@@ -180,7 +184,7 @@ function registerSelf_(body) {
         ? { ok: true, status: 'existing', code: String(data[i][COL.CODE - 1]), age: ageKey_(data[i][COL.AGE - 1]), completed: data[i][COL.DONE - 1] === DONE_MARK }
         : { ok: false, error: 'phone_taken' };
     }
-    return createRow_(data, { name: name, identity: identity, age: age, phone: phone, method: METHOD.self, regBy: '' });
+    return createRow_(data, { name: name, identity: identity, gender: gender, age: age, phone: phone, method: METHOD.self, regBy: '' });
   }, afterCreate_);
 }
 
@@ -191,17 +195,19 @@ function staffRegister(pin, form) {
   form = form || {};
   const name = cleanText_(form.name, 40);
   const identity = IDENTITIES.indexOf(form.identity) !== -1 ? form.identity : '';
+  const gender = GENDERS.indexOf(form.gender) !== -1 ? form.gender : '';
   const age = AGE[form.age];
   const rawPhone = String(form.phone || '').trim();
   const phone = rawPhone ? normalizePhone_(rawPhone) : '';
   if (!name) return { ok: false, error: '請填寫姓名' };
   if (!identity) return { ok: false, error: '請選擇身分' };
+  if (!gender) return { ok: false, error: '請選擇性別' };
   if (!age) return { ok: false, error: '請選擇年齡' };
   if (rawPhone && !phone) return { ok: false, error: '手機格式不正確（09 開頭 10 碼），不填也可以' };
 
   return withLock_(() => {
     const data = getSheet_(REG_SHEET_NAME).getDataRange().getValues();
-    return createRow_(data, { name: name, identity: identity, age: age, phone: phone, method: METHOD.staff, regBy: staff });
+    return createRow_(data, { name: name, identity: identity, gender: gender, age: age, phone: phone, method: METHOD.staff, regBy: staff });
   }, afterCreate_);
 }
 
@@ -223,6 +229,7 @@ function createRow_(data, f) {
   values[COL.TIME - 1] = now_('yyyy/MM/dd HH:mm:ss');
   values[COL.NAME - 1] = f.name;
   values[COL.IDENTITY - 1] = f.identity;
+  values[COL.GENDER - 1] = f.gender || '';
   values[COL.AGE - 1] = f.age;
   values[COL.PHONE - 1] = f.phone;
   values[COL.METHOD - 1] = f.method;
@@ -272,9 +279,11 @@ function completeActivity_(rawCode, survey) {
       if (!answers) return { ok: false, error: 'invalid_survey' };
       const sheet = getSheet_(SURVEY_SHEET_NAME);
       ensureHeader_(sheet, SURVEY_HEADERS);
+      // 性別以報到名單為準；舊資料沒有性別時才用問卷送來的
+      const gender = String(found.values[COL.GENDER - 1] || '') || answers.gender;
       sheet.appendRow([
         now_('yyyy/MM/dd HH:mm:ss'), found.values[COL.IDENTITY - 1],
-        answers.gender, answers.q1, answers.q2, answers.q3, answers.q4, found.values[COL.AGE - 1],
+        gender, answers.q1, answers.q2, answers.q3, answers.q4, found.values[COL.AGE - 1],
       ]);
     }
     getSheet_(REG_SHEET_NAME).getRange(found.row, COL.DONE, 1, 2).setValues([[DONE_MARK, now_('HH:mm')]]);
@@ -287,12 +296,12 @@ function validateSurvey_(s) {
   if (!s) return null;
   const q2 = Number(s.q2);
   const q3 = Number(s.q3);
-  if (SURVEY_OPTIONS.gender.indexOf(s.gender) === -1) return null;
+  if (s.gender && SURVEY_OPTIONS.gender.indexOf(s.gender) === -1) return null; // 新版網頁不再送性別
   if (SURVEY_OPTIONS.q1.indexOf(s.q1) === -1) return null;
   if (!(q2 >= 1 && q2 <= 5 && q2 % 1 === 0) || !(q3 >= 1 && q3 <= 5 && q3 % 1 === 0)) return null;
   // 開頭加 ' 避免被試算表當成公式
   const q4 = cleanText_(s.q4, 500).replace(/^[=+\-@]/, "'$&");
-  return { gender: s.gender, q1: s.q1, q2: q2, q3: q3, q4: q4 };
+  return { gender: s.gender || '', q1: s.q1, q2: q2, q3: q3, q4: q4 };
 }
 
 // ============ 三竹簡訊 ============
@@ -418,6 +427,7 @@ function toStaffView_(row, v) {
     code: String(v[COL.CODE - 1]),
     name: String(v[COL.NAME - 1]),
     identity: String(v[COL.IDENTITY - 1]),
+    gender: String(v[COL.GENDER - 1] || ''),
     age: String(v[COL.AGE - 1]),
     phone: phone ? maskPhone_(phone) : '（無）',
     method: String(v[COL.METHOD - 1]),
@@ -661,6 +671,11 @@ function getStaffPageHtml_() {
       <input id="rName" type="text" maxlength="40" autocomplete="off">
       <label class="lbl">身分</label>
       <div class="opts">${identityButtons}</div>
+      <label class="lbl">性別</label>
+      <div class="opts">
+        <button type="button" class="opt" data-group="gender" data-value="生理男性">生理男性</button>
+        <button type="button" class="opt" data-group="gender" data-value="生理女性">生理女性</button>
+      </div>
       <label class="lbl">年齡</label>
       <div class="opts">
         <button type="button" class="opt" data-group="age" data-value="adult">12歲以上</button>
@@ -692,7 +707,7 @@ function getStaffPageHtml_() {
   var schedule = null;
   try { schedule = JSON.parse(sessionStorage.getItem('staffSchedule') || 'null'); } catch (e) { schedule = null; }
   var results = [];
-  var choice = { identity: '', age: '' };
+  var choice = { identity: '', gender: '', age: '' };
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 越南文（顯示在中文下方，按右上「Tiếng Việt」切換） ----------
@@ -702,8 +717,8 @@ function getStaffPageHtml_() {
     '▶ 第一次用？看操作示範動畫': 'Lần đầu dùng? Xem video hướng dẫn', '▶ 操作示範動畫': 'Video hướng dẫn thao tác',
     '領取查詢': 'Tra cứu nhận quà', '代為報到': 'Điểm danh hộ', '關懷登記': 'Ghi nhận quan tâm',
     '用序號查': 'Tra bằng mã số', '忘記序號？用姓名查': 'Quên mã số? Tra bằng tên', '搜尋': 'Tìm', '查詢': 'Tra cứu',
-    '姓名': 'Họ tên', '身分': 'Thân phận', '年齡': 'Độ tuổi', '序號': 'Mã số', '手機': 'Điện thoại',
-    '身分／年齡': 'Thân phận / Độ tuổi', '報到方式': 'Cách điểm danh', '活動完成': 'Hoàn thành hoạt động', '領取狀態': 'Tình trạng nhận quà',
+    '姓名': 'Họ tên', '身分': 'Thân phận', '性別': 'Giới tính', '生理男性': 'Nam', '生理女性': 'Nữ', '年齡': 'Độ tuổi', '序號': 'Mã số', '手機': 'Điện thoại',
+    '身分／年齡': 'Thân phận / Độ tuổi', '身分／性別／年齡': 'Thân phận / Giới tính / Độ tuổi', '報到方式': 'Cách điểm danh', '活動完成': 'Hoàn thành hoạt động', '領取狀態': 'Tình trạng nhận quà',
     '校內職員/老師': 'Nhân viên / giáo viên', '學生': 'Sinh viên', '來賓': 'Khách',
     '12歲以上': 'Từ 12 tuổi trở lên', '未滿12歲': 'Dưới 12 tuổi',
     '網頁報到': 'Tự điểm danh trên web', '未完成': 'Chưa hoàn thành', '未領取': 'Chưa nhận',
@@ -722,7 +737,7 @@ function getStaffPageHtml_() {
     '序號格式不正確：請只輸入數字（例：1、001、120），或改用姓名查': 'Mã số không đúng: chỉ nhập số (ví dụ 1, 001, 120), hoặc tra bằng tên',
     '查無此姓名，請確認字是否正確（可只輸入其中幾個字）': 'Không tìm thấy tên này, vui lòng kiểm tra lại (có thể chỉ nhập vài chữ)',
     '查無此序號，請再確認數字，或改用「忘記序號？用姓名查」': 'Không tìm thấy mã số, vui lòng kiểm tra lại số hoặc tra bằng tên',
-    '請填寫姓名，並選擇身分與年齡': 'Vui lòng điền họ tên và chọn thân phận, độ tuổi',
+    '請填寫姓名，並選擇身分、性別與年齡': 'Vui lòng điền họ tên và chọn thân phận, giới tính, độ tuổi', '請選擇性別': 'Vui lòng chọn giới tính',
     '序號已全部發放完畢': 'Đã phát hết mã số', '系統忙碌，請再試一次': 'Hệ thống đang bận, vui lòng thử lại',
     '未滿12歲（兒童版，不做心情溫度計）': 'Dưới 12 tuổi (bản thiếu nhi, không làm nhiệt kế cảm xúc)',
     '請告訴參加者序號，先用家長手機（沒有再用平板）選「我已經有序號」輸入': 'Hãy cho người tham gia biết mã số; ưu tiên dùng điện thoại phụ huynh (không có thì dùng máy tính bảng), chọn "我已經有序號" rồi nhập',
@@ -740,7 +755,7 @@ function getStaffPageHtml_() {
     '關卡一：簽到／認識情緒行為障礙　關卡二：心情溫度計　關卡三：回饋＋空氣鳳梨': 'Cửa 1: Điểm danh / Tìm hiểu rối loạn cảm xúc hành vi; Cửa 2: Nhiệt kế cảm xúc; Cửa 3: Phản hồi + nhận cây không khí',
     '大家輪流吃便當，確認有人接手工作再去': 'Mọi người thay phiên ăn cơm hộp; có người thay ca rồi mới đi',
     '清點物品後，用推車把備品運回資源教室': 'Kiểm đếm đồ dùng rồi dùng xe đẩy chở về phòng tài nguyên',
-    '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; xác nhận đã làm xong 5 câu tìm hiểu cảm xúc rồi mời sang Cửa 2',
+    '協助線上簽到，看到序號後協助抽情緒小卡；看到「第一關完成」畫面再請他到關卡二（兒童直接到第 3 關）': 'Hỗ trợ điểm danh trực tuyến; thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; thấy màn hình "Hoàn thành chặng 1" rồi mời sang Cửa 2 (trẻ em sang thẳng Cửa 3)',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý',
     '提醒參加者做心情溫度計；10 分以上（或第 6 題 2 分以上）帶去給心理師；協助心理師翻譯': 'Nhắc người tham gia làm nhiệt kế cảm xúc; từ 10 điểm trở lên (hoặc câu 6 từ 2 điểm) thì dẫn đến chuyên viên tâm lý; hỗ trợ phiên dịch cho chuyên viên tâm lý',
     '12/4（五）中午 行前說明': 'Trưa 12/4 (thứ Sáu): họp hướng dẫn trước hoạt động',
@@ -749,7 +764,7 @@ function getStaffPageHtml_() {
     '鼓勵參加者拿手板拍照；每 1 小時和張珈瀞互換': 'Khuyến khích người tham gia cầm bảng cầm tay chụp ảnh; mỗi 1 tiếng đổi việc với 張珈瀞',
     '拿便當': 'Lấy cơm hộp', '和另一位工讀生到校門口拿便當＋飲料，送到辦公室': 'Cùng một bạn làm thêm khác ra cổng trường lấy cơm hộp và đồ uống, mang về văn phòng',
     '關卡一：場控': 'Cửa 1: Điều phối', '關卡一：支援（同楊宜縈）': 'Cửa 1: Hỗ trợ (cùng 楊宜縈)',
-    '協助線上簽到，看到序號後協助抽情緒小卡；確認做完認識情緒 5 題再請他到關卡二；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; xác nhận đã làm xong 5 câu tìm hiểu cảm xúc rồi mời sang Cửa 2; điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
+    '協助線上簽到，看到序號後協助抽情緒小卡；看到「第一關完成」畫面再請他到關卡二（兒童直接到第 3 關）；協助沒手機的人代為報到、用平板參加': 'Hỗ trợ điểm danh trực tuyến, thấy mã số rồi thì hỗ trợ rút thẻ cảm xúc; thấy màn hình "Hoàn thành chặng 1" rồi mời sang Cửa 2 (trẻ em sang thẳng Cửa 3); điểm danh hộ người không có điện thoại và hướng dẫn dùng máy tính bảng',
     '關卡二：場控': 'Cửa 2: Điều phối', '關卡二：心理師': 'Cửa 2: Chuyên viên tâm lý', '關卡二：心理師（接手）': 'Cửa 2: Chuyên viên tâm lý (thay ca)',
     '高分者關懷輔導，在本系統「關懷登記」輸入序號註記；談完給通關碼（不願意也給）': 'Tư vấn quan tâm người có điểm cao, nhập mã số vào mục "關懷登記" để ghi nhận; nói chuyện xong thì đưa mã qua cửa (không muốn nói chuyện cũng đưa)',
     '關卡三：場控': 'Cửa 3: Điều phối', '關卡三：支援（同張瑞芸）': 'Cửa 3: Hỗ trợ (cùng 張瑞芸)', '關卡三：發放空氣鳳梨': 'Cửa 3: Phát cây không khí',
@@ -892,7 +907,7 @@ function getStaffPageHtml_() {
     out.appendChild(el('div', 'msg info', '找到 ' + results.length + ' 筆' + (results.length >= 30 ? '（只列前 30 筆，請輸入更完整的姓名）' : '') + '，請核對姓名、身分與年齡後選擇：'));
     results.forEach(function (s, i) {
       var item = el('div', 'item' + (selected === i ? ' sel' : ''));
-      item.appendChild(el('strong', '', s.name + '（' + s.identity + '・' + s.age + '）'));
+      item.appendChild(el('strong', '', s.name + '（' + s.identity + (s.gender ? '・' + s.gender : '') + '・' + s.age + '）'));
       item.appendChild(el('div', 'hint', s.code + '・' + s.phone + (s.picked ? '・已領取' : s.done ? '・已完成' : '・未完成')));
       item.style.textAlign = 'left';
       item.onclick = function () { select(i); };
@@ -913,7 +928,7 @@ function getStaffPageHtml_() {
     var card = el('div', 'card');
     kv(card, '序號', s.code, 'big');
     kv(card, '姓名', s.name);
-    kv(card, '身分／年齡', s.identity + '・' + s.age);
+    kv(card, '身分／性別／年齡', s.identity + '・' + (s.gender || '—') + '・' + s.age);
     kv(card, '手機', s.phone);
     kv(card, '報到方式', s.method);
     kv(card, '活動完成', el('span', 'tag ' + (s.done ? 'yes' : 'no'), s.done ? '✓ 已完成 ' + s.doneAt : '未完成'));
@@ -960,8 +975,8 @@ function getStaffPageHtml_() {
   });
 
   function register() {
-    var form = { name: $('rName').value.trim(), identity: choice.identity, age: choice.age, phone: $('rPhone').value.trim() };
-    if (!form.name || !form.identity || !form.age) { msg($('regOut'), '請填寫姓名，並選擇身分與年齡', 'error'); return; }
+    var form = { name: $('rName').value.trim(), identity: choice.identity, gender: choice.gender, age: choice.age, phone: $('rPhone').value.trim() };
+    if (!form.name || !form.identity || !form.gender || !form.age) { msg($('regOut'), '請填寫姓名，並選擇身分、性別與年齡', 'error'); return; }
     $('registerBtn').disabled = true;
     msg($('regOut'), '報到中…', 'info');
     call('staffRegister', [pin, form], function (r) {
@@ -979,7 +994,7 @@ function getStaffPageHtml_() {
       cb.appendChild(el('div', 'hint', '請告訴參加者序號，先用家長手機（沒有再用平板）選「我已經有序號」輸入' + (r.sms === true ? '（簡訊已發送）' : r.sms === false ? '（簡訊發送失敗）' : '')));
       box.appendChild(cb);
       $('rName').value = ''; $('rPhone').value = '';
-      choice = { identity: '', age: '' };
+      choice = { identity: '', gender: '', age: '' };
       Array.prototype.forEach.call(document.querySelectorAll('.opt[data-group]'), function (x) { x.classList.remove('on'); });
     }, $('regOut'));
   }

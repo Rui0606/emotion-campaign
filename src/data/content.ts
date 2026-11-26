@@ -113,9 +113,9 @@ export const UI_TEXT = {
     vi: "Xem đáp án",
   },
   nextStep: {
-    zh: "下一關：心情溫度計",
-    en: "Next: Emotion Thermometer",
-    vi: "Tiếp theo: Nhiệt kế cảm xúc",
+    zh: "完成第一關",
+    en: "Finish Step 1",
+    vi: "Hoàn thành chặng 1",
   }
 };
 
@@ -179,6 +179,12 @@ export const CHECKIN_IDENTITIES: { value: string; label: LocalizedString }[] = [
   { value: '校內職員/老師', label: { zh: '校內職員／老師', en: 'School staff / Teacher', vi: 'Nhân viên / Giáo viên trong trường' } },
   { value: '學生', label: { zh: '學生', en: 'Student', vi: 'Học sinh / Sinh viên' } },
   { value: '來賓', label: { zh: '來賓', en: 'Guest', vi: 'Khách quý' } },
+];
+
+// 性別（報到時填；value 必須與 Code.gs 的 GENDERS 一致，回饋問卷會從報到名單自動帶入）
+export const CHECKIN_GENDERS: { value: string; label: LocalizedString }[] = [
+  { value: '生理男性', label: { zh: '生理男性', en: 'Male', vi: 'Nam' } },
+  { value: '生理女性', label: { zh: '生理女性', en: 'Female', vi: 'Nữ' } },
 ];
 
 // 年齡組別：12 歲以上走大人版（含心情溫度計與問卷）；未滿 12 歲走兒童版（只有認識情緒 5 題）

@@ -7,7 +7,7 @@ export const CHECKIN_API_URL: string =
 export type AgeGroup = 'adult' | 'child';
 
 export type CheckinError =
-  | 'invalid_name' | 'invalid_identity' | 'invalid_age' | 'invalid_phone'
+  | 'invalid_name' | 'invalid_identity' | 'invalid_gender' | 'invalid_age' | 'invalid_phone'
   | 'phone_taken' | 'child_staff' | 'full' | 'busy' | 'server' | 'network' | 'not_found' | 'invalid_survey';
 
 export interface CheckinResult {
@@ -21,7 +21,7 @@ export interface CheckinResult {
 }
 
 export interface SurveyAnswers {
-  gender: string;
+  gender?: string; // 舊版欄位：性別改在報到時填，後台會從報到名單帶入
   q1: string;
   q2: number;
   q3: number;
@@ -70,10 +70,10 @@ const post = (body: object) =>
 
 const toAge = (v: unknown): AgeGroup => (v === 'child' ? 'child' : 'adult');
 
-export const registerCheckin = async (name: string, identity: string, age: AgeGroup, phone: string): Promise<CheckinResult> => {
+export const registerCheckin = async (name: string, identity: string, gender: string, age: AgeGroup, phone: string): Promise<CheckinResult> => {
   if (PREVIEW) { previewAge = age; return { ok: true, code: 'SEM000', status: 'new', age, completed: false, sms: false }; }
   try {
-    const data = await post({ action: 'register', name, identity, age, phone });
+    const data = await post({ action: 'register', name, identity, gender, age, phone });
     if (data && data.ok && data.code) {
       return { ok: true, code: String(data.code), status: data.status, age: toAge(data.age), completed: !!data.completed, sms: data.sms };
     }
