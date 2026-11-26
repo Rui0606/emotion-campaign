@@ -13,7 +13,7 @@ const COUNSELOR_CODE = '1031';
 const STORAGE_KEY = 'hsiuping-emotion-campaign-v2'; // 流程改版時換 key，避免讀到舊版進度
 const STORAGE_TTL_MS = 2 * 60 * 60 * 1000; // 進度保留 2 小時，避免共用裝置留下前一位的結果
 const KIOSK_KEY = 'hsiuping-emotion-kiosk';
-const KIOSK_IDLE_MS = 2 * 60 * 1000; // 共用平板閒置 2 分鐘自動回到首頁
+const KIOSK_IDLE_MS = 10 * 60 * 1000; // 共用平板閒置 10 分鐘自動回到首頁（平板會跟著參加者走到心理師、第 3 關，2 分鐘太短會清掉進度）
 
 // 圖片路徑一律相對於網站根目錄（支援 GitHub Pages 子路徑）
 const asset = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
@@ -271,7 +271,7 @@ export default function App() {
     }
   }, [lang, currentStep, shuffledQuiz, quizAnswers, showQuizResults, quizPassed, bsrsAnswers, counselorPassed, checkinCode, checkinName, ageGroup, completed, kidsAnswers, kidsShowResults]);
 
-  // 共用平板：閒置 2 分鐘自動清除並回到首頁，避免下一位看到前一位的結果
+  // 共用平板：閒置 10 分鐘自動清除並回到首頁，避免下一位看到前一位的結果
   const lastActivity = useRef(Date.now());
   const stepRef = useRef(currentStep);
   stepRef.current = currentStep;
@@ -285,7 +285,7 @@ export default function App() {
         lastActivity.current = Date.now();
         resetAll();
       }
-    }, 10000); // 每 10 秒檢查一次，實際清除時間約 2 分鐘～2 分 10 秒
+    }, 10000); // 每 10 秒檢查一次，實際清除時間約 10 分鐘～10 分 10 秒
     return () => {
       events.forEach(ev => window.removeEventListener(ev, mark));
       window.clearInterval(timer);
@@ -1696,6 +1696,15 @@ export default function App() {
             <h2 className={`text-xl font-bold text-gray-900${zc}`}>{zt(SURVEY.title[lang])}</h2>
           </div>
           <p className={`text-gray-600 text-sm leading-relaxed${zc}`}>{zt(SURVEY.intro[lang])}</p>
+        </div>
+
+        {/* 現場動線：到第 3 關再填，減少第 2 關擁擠 */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl text-sm font-medium leading-relaxed">
+          📍 {pick(
+            '請帶著手機（或平板）移動到第 3 關再填寫問卷。填完後把完成畫面給工作人員看，就可以領取空氣鳳梨。',
+            'Please take your phone (or tablet) to Station 3 before filling out this survey. When you finish, show the completion screen to the staff to receive your air plant.',
+            'Vui lòng mang điện thoại (hoặc máy tính bảng) đến Cửa 3 rồi mới điền khảo sát. Điền xong, đưa màn hình hoàn thành cho nhân viên để nhận cây không khí.'
+          )}
         </div>
 
         {surveyError && (
