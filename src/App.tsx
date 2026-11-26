@@ -1699,12 +1699,12 @@ export default function App() {
         </div>
 
         {/* 現場動線：到第 3 關再填，減少第 2 關擁擠 */}
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl text-sm font-medium leading-relaxed">
-          📍 {pick(
+        <div className={`bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl text-sm font-medium leading-relaxed${zc}`}>
+          📍 {zt(pick(
             '請帶著手機（或平板）移動到第 3 關再填寫問卷。填完後把完成畫面給工作人員看，就可以領取空氣鳳梨。',
             'Please take your phone (or tablet) to Station 3 before filling out this survey. When you finish, show the completion screen to the staff to receive your air plant.',
             'Vui lòng mang điện thoại (hoặc máy tính bảng) đến Cửa 3 rồi mới điền khảo sát. Điền xong, đưa màn hình hoàn thành cho nhân viên để nhận cây không khí.'
-          )}
+          ))}
         </div>
 
         {surveyError && (
